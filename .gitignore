@@ -1,0 +1,21 @@
+# Python cache and packaging artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+
+# Test and tooling caches
+.pytest_cache/
+pytest-cache-files-*/
+
+# Virtual environments
+.venv/
+venv/
+
+# Generated tournament artifacts
+artifacts/
+tests/_artifacts_tmp/
+
+# Notebook checkpoints
+.ipynb_checkpoints/

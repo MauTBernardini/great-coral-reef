@@ -1,0 +1,28 @@
+board:
+  width: 4
+  height: 4
+  max_layers: 3
+
+players:
+  initial_resources:
+    sun: 10
+    plankton: 10
+
+game:
+  max_rounds: 50
+
+climate:
+  initial_temperature: 28.0
+  initial_ph: 8.1
+  temperature_step: 0.5
+  ph_step: 0.05
+  critical_temperature: 32.0
+  critical_ph: 7.4
+  deck_size: 90
+  era_thresholds:
+    "2":
+      temperature: 29.0
+      ph: 7.95
+    "3":
+      temperature: 30.5
+      ph: 7.8

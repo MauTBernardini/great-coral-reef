@@ -1,0 +1,38 @@
+{
+  "saved_at_utc": "20260410T010153Z",
+  "version": {
+    "code_version": "0.1.0",
+    "ruleset_version": "climate-era-v1"
+  },
+  "tournament_config": {
+    "games": 2,
+    "corals_path": "C:\\Users\\mausi\\OneDrive\\Área de Trabalho\\Learning\\Data Science & Analytics\\Portfolio Material\\great-coral-reef\\configs\\corals.yaml",
+    "balance_rules_path": "C:\\Users\\mausi\\OneDrive\\Área de Trabalho\\Learning\\Data Science & Analytics\\Portfolio Material\\great-coral-reef\\configs\\balance_rules.yaml",
+    "climate_path": "C:\\Users\\mausi\\OneDrive\\Área de Trabalho\\Learning\\Data Science & Analytics\\Portfolio Material\\great-coral-reef\\configs\\climate.yaml",
+    "version_path": "C:\\Users\\mausi\\OneDrive\\Área de Trabalho\\Learning\\Data Science & Analytics\\Portfolio Material\\great-coral-reef\\configs\\version.yaml",
+    "output_dir": "C:\\Users\\mausi\\OneDrive\\Área de Trabalho\\Learning\\Data Science & Analytics\\Portfolio Material\\great-coral-reef\\tests\\_artifacts_tmp\\6c8d615d291b4e4dbd401731cc5ccd3c\\tournaments",
+    "agent_p1": "random",
+    "agent_p2": "greedy",
+    "seed_start": 1000,
+    "max_rounds": 50,
+    "show_progress": false,
+    "save_results": true
+  },
+  "summary": {
+    "games": 2,
+    "p1_winrate": 0.0,
+    "p2_winrate": 1.0,
+    "draw_rate": 0.0,
+    "avg_turns": 99.0,
+    "avg_rounds": 50.0,
+    "avg_temperature": 28.0,
+    "avg_ph": 8.400000000000004,
+    "avg_current_era": 1.0,
+    "avg_p1_score": 13.0,
+    "avg_p2_score": 15.5,
+    "avg_board_occupancy": 0.17708333333333331
+  },
+  "files": {
+    "results_csv": "C:\\Users\\mausi\\OneDrive\\Área de Trabalho\\Learning\\Data Science & Analytics\\Portfolio Material\\great-coral-reef\\tests\\_artifacts_tmp\\6c8d615d291b4e4dbd401731cc5ccd3c\\tournaments\\20260410T010153Z_v0.1.0\\results.csv"
+  }
+}

@@ -1,0 +1,40 @@
+corals:
+  - coral_id: staghorn
+    name: Staghorn Coral
+    cost:
+      sun: 2
+      plankton: 1
+    base_points: 2
+    traits: [branching]
+    max_height_gain: 1
+    requires_support: true
+
+  - coral_id: elkhorn
+    name: Elkhorn Coral
+    cost:
+      sun: 3
+      plankton: 1
+    base_points: 3
+    traits: [branching]
+    max_height_gain: 1
+    requires_support: true
+
+  - coral_id: sponge_tower
+    name: Sponge Tower
+    cost:
+      sun: 1
+      plankton: 2
+    base_points: 1
+    traits: [sponge, vertical]
+    max_height_gain: 2
+    requires_support: true
+
+  - coral_id: brain_coral
+    name: Brain Coral
+    cost:
+      sun: 2
+      plankton: 2
+    base_points: 3
+    traits: [massive]
+    max_height_gain: 1
+    requires_support: true
