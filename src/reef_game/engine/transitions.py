@@ -259,6 +259,8 @@ def _start_new_round(state):
     state.active_player = PlayerId.P1
     # Cada rodada inicia com a produção e um evento climático.
     _resolve_production_round(state)
+    # A produção pode sacrificar fauna (falta de O2) -> reflete no score.
+    recompute_scores(state)
     _resolve_climate_round(state)
 
 
