@@ -61,6 +61,10 @@ class GreedyAgent(BaseAgent):
             cost = sum(fauna.cost.values.values())
             return points - 0.15 * cost
 
+        if action.action_type == ActionType.MOVE_SMALL_FISH:
+            # Bônus grátis; o greedy míope não modela reposicionamento -> neutro.
+            return 0.0
+
         if action.action_type == ActionType.MOVE_FAUNA:
             # Só vale mover para um tile inédito e enquanto abaixo do teto de pontuação.
             visited = state.players[owner].moon_jelly_visited

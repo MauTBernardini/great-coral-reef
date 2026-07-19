@@ -4,7 +4,7 @@ from reef_game.agents.greedy_agent import GreedyAgent
 from reef_game.content.loader import load_corals, load_fauna, load_instincts, load_soils
 from reef_game.engine.enums import PlayerId
 from reef_game.engine.models import PlacedCoral
-from reef_game.engine.ponds import MAX_INSTINCTS, detect_new_pond, maybe_form_pond
+from reef_game.engine.ponds import MAX_CARDS, detect_new_pond, maybe_form_pond
 from reef_game.engine.setup import create_initial_state, load_balance_rules, load_climate_config
 from reef_game.simulation.metrics import _distribution_stats
 from reef_game.simulation.runner import run_game
@@ -64,9 +64,10 @@ def test_maybe_form_pond_sets_owner_and_grants_offer(initial_state):
     assert cells is not None
     assert len(initial_state.ponds) == 1
     assert initial_state.ponds[0].owner == PlayerId.P1
-    # ganhou uma oferta de Instinto (2 opções para escolher 1)
-    assert len(initial_state.players[PlayerId.P1].pending_instinct_offers) == 1
-    assert len(initial_state.players[PlayerId.P1].pending_instinct_offers[0]) == 2
+    # ganhou uma oferta de carta (2 Instintos; sem baralho de upgrade neste teste)
+    offers = initial_state.players[PlayerId.P1].pending_card_offers
+    assert len(offers) == 1
+    assert len(offers[0]["instincts"]) == 2
 
 
 def test_closer_owns_pond_even_with_enemy_corals(initial_state):
@@ -102,7 +103,7 @@ def test_intersection_rule_blocks_second_pond(initial_state):
 def test_pond_offer_capped_at_max_instincts(initial_state):
     initial_state.available_instincts = INSTINCTS
     initial_state.instinct_deck = list(INSTINCTS.keys())
-    initial_state.players[PlayerId.P1].instinct_cards = ["outer_wall"] * MAX_INSTINCTS
+    initial_state.players[PlayerId.P1].instinct_cards = ["outer_wall"] * MAX_CARDS
     _square_2x2(initial_state)
     _coral(initial_state, (1, 1, 0))
     _make_two_tall(initial_state)
@@ -111,7 +112,7 @@ def test_pond_offer_capped_at_max_instincts(initial_state):
 
     # Pond forma, mas nenhuma oferta é dada (teto atingido).
     assert len(initial_state.ponds) == 1
-    assert initial_state.players[PlayerId.P1].pending_instinct_offers == []
+    assert initial_state.players[PlayerId.P1].pending_card_offers == []
 
 
 # ---------------- Métricas ao longo do jogo ----------------

@@ -122,6 +122,10 @@ class LongTermAgent(BaseAgent):
             cost = sum(fauna.cost.values.values())
             return points - W_COST * cost
 
+        if action.action_type == ActionType.MOVE_SMALL_FISH:
+            # Bônus grátis de reposicionamento; sem modelo de valor -> neutro.
+            return 0.0
+
         if action.action_type == ActionType.MOVE_FAUNA:
             # Mover só compensa para um tile inédito e enquanto abaixo do teto.
             visited = state.players[owner].moon_jelly_visited

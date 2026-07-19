@@ -3,6 +3,7 @@ from copy import deepcopy
 from .actions import (
     BuyCoralsAction,
     MoveFaunaAction,
+    MoveSmallFishAction,
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
@@ -16,6 +17,7 @@ from .ponds import maybe_form_pond
 from .production import resolve_production
 from .scoring import (
     count_adjacent_fauna,
+    grant_small_fish_death_bonus,
     player_small_fish,
     recompute_scores,
     score_fauna,
@@ -82,6 +84,11 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
+    if action.action_type == ActionType.MOVE_SMALL_FISH:
+        # Bônus grátis (Attraction Pheromones): NÃO avança o turno.
+        _apply_move_small_fish(next_state, action)
+        return next_state
+
     if action.action_type == ActionType.BUY_CORALS:
         _apply_buy_corals(next_state, action)
         _advance_turn(next_state)
@@ -105,6 +112,7 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
                 break
             sac_cell, sac_fauna = smalls.pop(0)
             sac_cell.remove_fauna(sac_fauna)
+            grant_small_fish_death_bonus(state, sac_fauna, state.active_player)  # Safe Nursery
 
     # Efeitos ao jogar (antes de adicionar a carta à célula):
     #  - Green Chromis: se o tile já tem um Green Chromis, recupera 1 Sol.
@@ -161,6 +169,7 @@ def _apply_play_parasite(state, action: PlayParasiteAction):
                 break
             sac_cell, sac_fauna = smalls.pop(0)
             sac_cell.remove_fauna(sac_fauna)
+            grant_small_fish_death_bonus(state, sac_fauna, state.active_player)  # Safe Nursery
 
     player.hand.remove(action.fauna_id)  # gasta a carta
     cell.add_fauna(action.fauna_id, state.active_player)  # fauna é SUA, no coral inimigo
@@ -185,6 +194,31 @@ def _apply_play_parasite(state, action: PlayParasiteAction):
             "position": action.position,
             "host": cell.occupant.owner.value if cell.occupant else None,
             "points_gained": gained,
+        },
+    )
+
+
+def _apply_move_small_fish(state, action: MoveSmallFishAction):
+    from_cell = state.board.cells[action.from_position]
+    to_cell = state.board.cells[action.to_position]
+    # Preserva a posse do peixe (só reposiciona).
+    owner = next(
+        (fo for fid, fo in from_cell.fauna_with_owners() if fid == action.fauna_id),
+        state.active_player,
+    )
+    from_cell.remove_fauna(action.fauna_id)
+    to_cell.add_fauna(action.fauna_id, owner)
+    state.players[state.active_player].moved_small_fish_this_turn = True
+
+    recompute_scores(state)
+    _append_history(
+        state,
+        action,
+        {
+            "result": "move_small_fish",
+            "fauna_id": action.fauna_id,
+            "from": action.from_position,
+            "to": action.to_position,
         },
     )
 
@@ -385,6 +419,8 @@ def _advance_turn(state):
     inicia a próxima rodada (produção + clima)."""
     state.turn += 1
     current = state.active_player
+    # O bônus grátis de mover small fish é por turno: reseta ao encerrar o turno.
+    state.players[current].moved_small_fish_this_turn = False
     other = PlayerId.P1 if current == PlayerId.P2 else PlayerId.P2
 
     if not state.players[other].passed_this_round:

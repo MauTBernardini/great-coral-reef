@@ -114,6 +114,7 @@ def summarize_game(state, telemetry):
         "coral_deck_remaining": len(state.coral_deck),
         "action_history_length": len(state.action_history),
         "instinct_cards": {pid.value: list(p.instinct_cards) for pid, p in players.items()},
+        "upgrade_cards": {pid.value: list(p.upgrade_cards) for pid, p in players.items()},
         "instinct_points": {pid.value: score_instinct(state, pid) for pid in players},
         "ponds": {
             pid.value: sum(1 for pond in state.ponds if pond.owner == pid) for pid in players

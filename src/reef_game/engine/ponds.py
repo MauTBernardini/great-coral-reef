@@ -13,8 +13,8 @@ from collections import deque
 
 from .models import PondState
 
-# Teto de cartas de Instinto por jogador (1 inicial + 3 extras de ponds).
-MAX_INSTINCTS = 4
+# Teto de cartas por jogador: 1 instinto inicial + 3 cartas de pond (instinto e/ou upgrade).
+MAX_CARDS = 4
 MIN_POND_CORALS = 4
 MIN_TALL_COLUMNS = 2
 TALL_MIN_HEIGHT = 2
@@ -105,23 +105,24 @@ def detect_new_pond(state, position):
     return frozenset(cycle)
 
 
-def _grant_instinct_offer(state, player_id):
+def _grant_card_offer(state, player_id):
+    """Oferta de pond: 2 Instintos + 2 Upgrades, para o jogador escolher 1 (no runner)."""
     player = state.players[player_id]
-    if len(player.instinct_cards) + len(player.pending_instinct_offers) >= MAX_INSTINCTS:
+    owned = len(player.instinct_cards) + len(player.upgrade_cards)
+    if owned + len(player.pending_card_offers) >= MAX_CARDS:
         return
-    n = min(2, len(state.instinct_deck))
-    if n == 0:
-        return
-    offer = [state.instinct_deck.pop(0) for _ in range(n)]
-    player.pending_instinct_offers.append(offer)
+    instincts = [state.instinct_deck.pop(0) for _ in range(min(2, len(state.instinct_deck)))]
+    upgrades = [state.upgrade_deck.pop(0) for _ in range(min(2, len(state.upgrade_deck)))]
+    if instincts or upgrades:
+        player.pending_card_offers.append({"instincts": instincts, "upgrades": upgrades})
 
 
 def maybe_form_pond(state, position, placer):
     """Após colocar um coral, tenta formar uma pond fechada por ele. Se formar, o
-    ``placer`` vira dono e ganha uma oferta de Instinto (até o teto)."""
+    ``placer`` vira dono e ganha uma oferta de carta (Instinto ou Upgrade), até o teto."""
     cells = detect_new_pond(state, position)
     if cells is None:
         return None
     state.ponds.append(PondState(cells=cells, owner=placer))
-    _grant_instinct_offer(state, placer)
+    _grant_card_offer(state, placer)
     return cells

@@ -6,7 +6,7 @@ bonuses. Today the only ability contributor is the Elkhorn cluster bonus.
 """
 
 from .enums import ResourceType
-from .scoring import _count_adjacent_seagrass, score_fauna
+from .scoring import _count_adjacent_seagrass, grant_small_fish_death_bonus, score_fauna
 
 ELKHORN_ID = "elkhorn"
 DUGONG_ID = "dugong"
@@ -26,7 +26,9 @@ def _sacrifice_lowest_fauna(state, owner, count):
         if not entries:
             break
         _, cell, fauna_id = entries.pop(0)
+        f_owner = next((fo for fid, fo in cell.fauna_with_owners() if fid == fauna_id), owner)
         cell.remove_fauna(fauna_id)
+        grant_small_fish_death_bonus(state, fauna_id, f_owner)  # Safe Nursery
         sacrificed.append(fauna_id)
     return sacrificed
 

@@ -43,6 +43,10 @@ class CoralDefinition:
     o2: int = 0
     # Capacidade habitacional: quantas Faunas podem morar neste coral (futuro).
     habitat_capacity: int = 0
+    # Tipos descritivos do coral (ex.: "hard"/"soft", "massive"/"branching", "nps").
+    types: List[str] = field(default_factory=list)
+    # Resistência térmica: "low" | "average" | "high" | None ("-", sem classificação).
+    thermal_resistance: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +104,16 @@ class InstinctDefinition:
     points: int
     # Chave da regra de pontuação, despachada em engine/scoring.py (score_instinct).
     rule: str
+
+
+@dataclass(frozen=True)
+class UpgradeDefinition:
+    """Carta de Upgrade: efeito permanente no board enquanto possuída."""
+
+    upgrade_id: str
+    name: str
+    # Chave do efeito, aplicada no engine (validators/scoring/production/transitions).
+    effect: str
 
 
 @dataclass(frozen=True)
@@ -185,14 +199,17 @@ class PlayerState:
     bought_corals_this_round: bool = False
     # Já moveu uma fauna nesta rodada (máx. 1x/rodada, ex.: Moon Jelly).
     moved_fauna_this_round: bool = False
+    # Já usou o bônus grátis de mover small fish neste turno (Attraction Pheromones).
+    moved_small_fish_this_turn: bool = False
     # Tiles (posições 3D) já visitados por Moon Jellies deste jogador — pontuam por exploração.
     moon_jelly_visited: Set[Coord3D] = field(default_factory=set)
     # Cartas de Instinto que o jogador possui (inicial + extras de ponds; pontuam no fim).
-    # Máx. 4 (1 inicial + 3 extras).
     instinct_cards: List[str] = field(default_factory=list)
-    # Ofertas pendentes de Instinto (cada uma = lista de opções p/ escolher 1). Resolvidas
-    # pelo runner (que tem acesso ao agente). Alimentadas no setup e ao formar ponds.
-    pending_instinct_offers: List[List[str]] = field(default_factory=list)
+    # Cartas de Upgrade que o jogador possui (efeitos permanentes no presente).
+    upgrade_cards: List[str] = field(default_factory=list)
+    # Ofertas pendentes de carta (cada uma = {"instincts": [...], "upgrades": [...]}, escolhe 1).
+    # Resolvidas pelo runner. Teto: instinct_cards + upgrade_cards <= 4 (1 inicial + 3 de ponds).
+    pending_card_offers: List[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -243,7 +260,10 @@ class GameState:
     available_fauna: Dict[str, "FaunaDefinition"] = field(default_factory=dict)
     # Cartas de Instinto disponíveis no jogo (id -> definição).
     available_instincts: Dict[str, "InstinctDefinition"] = field(default_factory=dict)
-    # Baralho de Instinto restante (ids embaralhados); ofertas sacam daqui.
+    # Cartas de Upgrade disponíveis no jogo (id -> definição).
+    available_upgrades: Dict[str, "UpgradeDefinition"] = field(default_factory=dict)
+    # Baralhos restantes (ids embaralhados); ofertas de pond sacam daqui.
     instinct_deck: List[str] = field(default_factory=list)
+    upgrade_deck: List[str] = field(default_factory=list)
     # Ponds formadas no jogo (para roubo e regra de interseção).
     ponds: List["PondState"] = field(default_factory=list)

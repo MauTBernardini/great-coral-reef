@@ -105,6 +105,23 @@ class MoveFaunaAction(Action):
 
 
 @dataclass(frozen=True)
+class MoveSmallFishAction(Action):
+    """Attraction Pheromones (bônus grátis 1x/turno): mover um small fish (seu ou do
+    inimigo) para um coral adjacente. Só reposiciona — a posse do peixe não muda.
+    Não consome o turno."""
+
+    fauna_id: str
+    from_position: Tuple[int, int, int]
+    to_position: Tuple[int, int, int]
+
+    def __init__(self, fauna_id, from_position, to_position):
+        object.__setattr__(self, "action_type", ActionType.MOVE_SMALL_FISH)
+        object.__setattr__(self, "fauna_id", fauna_id)
+        object.__setattr__(self, "from_position", from_position)
+        object.__setattr__(self, "to_position", to_position)
+
+
+@dataclass(frozen=True)
 class BuyCoralsAction(Action):
     """Comprar 2 cartas de coral fechadas (sacar do baralho para a mão, teto de 10)."""
 

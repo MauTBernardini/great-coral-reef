@@ -19,6 +19,7 @@ class ActionType(str, Enum):
     PLAY_FAUNA = "play_fauna"
     PLAY_PARASITE = "play_parasite"
     MOVE_FAUNA = "move_fauna"
+    MOVE_SMALL_FISH = "move_small_fish"
     BUY_CORALS = "buy_corals"
     PASS = "pass"
 

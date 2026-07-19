@@ -102,6 +102,14 @@ def build_instinct_deck(seed: int, instinct_definitions: dict) -> list[str]:
     return deck
 
 
+def build_upgrade_deck(seed: int, upgrade_definitions: dict) -> list[str]:
+    """Baralho de Upgrade embaralhado (ids únicos)."""
+    deck = list(upgrade_definitions.keys())
+    if deck:
+        Random(seed + 404).shuffle(deck)
+    return deck
+
+
 def draw_instinct_offer(deck: list[str], size: int = 2) -> list[str]:
     """Saca até ``size`` cartas do topo do baralho (remove-as); retorna a oferta."""
     n = min(size, len(deck))
@@ -116,17 +124,21 @@ def create_initial_state(
     soil_definitions: dict | None = None,
     fauna_definitions: dict | None = None,
     instinct_definitions: dict | None = None,
+    upgrade_definitions: dict | None = None,
 ) -> GameState:
     balance_rules = balance_rules or _default_balance_rules()
     climate_config = climate_config or {"deck": []}
     soil_definitions = soil_definitions or {}
     fauna_definitions = fauna_definitions or {}
     instinct_definitions = instinct_definitions or {}
+    upgrade_definitions = upgrade_definitions or {}
     soil_pile = build_soil_pile(seed, soil_definitions)
     coral_deck = build_coral_deck(seed, coral_definitions, fauna_definitions)
     instinct_deck = build_instinct_deck(seed, instinct_definitions)
-    p1_instinct_offer = draw_instinct_offer(instinct_deck)
-    p2_instinct_offer = draw_instinct_offer(instinct_deck)
+    upgrade_deck = build_upgrade_deck(seed, upgrade_definitions)
+    # Oferta inicial: só Instinto (2 opções, escolhe 1).
+    p1_offer = {"instincts": draw_instinct_offer(instinct_deck), "upgrades": []}
+    p2_offer = {"instincts": draw_instinct_offer(instinct_deck), "upgrades": []}
 
     board_cfg = balance_rules["board"]
     resource_cfg = balance_rules["players"]["initial_resources"]
@@ -164,7 +176,7 @@ def create_initial_state(
             hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
-            pending_instinct_offers=[p1_instinct_offer] if p1_instinct_offer else [],
+            pending_card_offers=[p1_offer] if p1_offer["instincts"] else [],
         ),
         PlayerId.P2: PlayerState(
             player_id=PlayerId.P2,
@@ -172,7 +184,7 @@ def create_initial_state(
             hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
-            pending_instinct_offers=[p2_instinct_offer] if p2_instinct_offer else [],
+            pending_card_offers=[p2_offer] if p2_offer["instincts"] else [],
         ),
     }
 
@@ -198,5 +210,7 @@ def create_initial_state(
         coral_deck=coral_deck,
         available_fauna=fauna_definitions,
         available_instincts=instinct_definitions,
+        available_upgrades=upgrade_definitions,
         instinct_deck=instinct_deck,
+        upgrade_deck=upgrade_deck,
     )

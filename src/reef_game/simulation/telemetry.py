@@ -52,6 +52,7 @@ def _player_snapshot(state, player):
         "fauna_count": len(fauna),
         "ponds_count": ponds_count,                            # ponds que o player possui
         "instincts_count": len(player.instinct_cards),         # cartas de Instinto que possui
+        "upgrades_count": len(player.upgrade_cards),           # cartas de Upgrade que possui
     }
 
 
@@ -122,6 +123,7 @@ class GameTelemetry:
                         "fauna_count": p["fauna_count"],
                         "ponds": p["ponds_count"],
                         "instincts": p["instincts_count"],
+                        "upgrades": p["upgrades_count"],
                         "corals_z0": p["corals_by_layer"].get(0, 0),
                         "corals_z1": p["corals_by_layer"].get(1, 0),
                         "corals_z2": p["corals_by_layer"].get(2, 0),

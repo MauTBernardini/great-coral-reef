@@ -9,6 +9,7 @@ from .economy import effective_cost
 from .enums import ActionType, ResourceType
 from .models import MAX_HAND_SIZE
 from .scoring import (
+    effective_habitat_capacity,
     fauna_habitat_cost,
     has_patrol_neighbor,
     occupied_habitat,
@@ -57,6 +58,10 @@ def validate_action(state, action) -> None:
         _validate_move_fauna(state, action)
         return
 
+    if action.action_type == ActionType.MOVE_SMALL_FISH:
+        _validate_move_small_fish(state, action)
+        return
+
     if action.action_type == ActionType.BUY_CORALS:
         _validate_buy_corals(state, action)
         return
@@ -97,8 +102,7 @@ def _validate_play_fauna(state, action: PlayFaunaAction) -> None:
         if base.soil is None or base.soil.soil_id != fauna.required_soil:
             raise InvalidActionError(f"Fauna requires a {fauna.required_soil} column.")
 
-    coral_def = state.available_corals[coral.coral_id]
-    free = coral_def.habitat_capacity - occupied_habitat(state, cell)
+    free = effective_habitat_capacity(state, cell) - occupied_habitat(state, cell)
     if free < fauna_habitat_cost(state, action.fauna_id, coral.coral_id):
         raise InvalidActionError("Not enough habitat capacity on the coral.")
 
@@ -153,8 +157,7 @@ def _validate_play_parasite(state, action) -> None:
         if base.soil is None or base.soil.soil_id != fauna.required_soil:
             raise InvalidActionError(f"Fauna requires a {fauna.required_soil} column.")
 
-    coral_def = state.available_corals[coral.coral_id]
-    free = coral_def.habitat_capacity - occupied_habitat(state, cell)
+    free = effective_habitat_capacity(state, cell) - occupied_habitat(state, cell)
     if free < fauna_habitat_cost(state, action.fauna_id, coral.coral_id):
         raise InvalidActionError("Not enough habitat capacity on the host coral.")
 
@@ -223,6 +226,45 @@ def _validate_move_fauna(state, action) -> None:
 
     if not fauna.predator_immune and has_patrol_neighbor(state, action.to_position):
         raise InvalidActionError("Blocked by an adjacent patrolling predator.")
+
+
+PHEROMONES_CARD_ID = "attraction_pheromones"
+
+
+def _validate_move_small_fish(state, action) -> None:
+    player = state.players[state.active_player]
+
+    if PHEROMONES_CARD_ID not in player.upgrade_cards:
+        raise InvalidActionError("Requires the Attraction Pheromones upgrade.")
+    if player.moved_small_fish_this_turn:
+        raise InvalidActionError("Already moved a small fish this turn.")
+    if action.fauna_id not in state.available_fauna:
+        raise InvalidActionError("Unknown fauna_id.")
+    if not state.available_fauna[action.fauna_id].is_small_fish:
+        raise InvalidActionError("Only small fish can be moved.")
+
+    if action.to_position == action.from_position:
+        raise InvalidActionError("Destination must differ from origin.")
+    if action.to_position not in orthogonal_neighbors_3d(action.from_position):
+        raise InvalidActionError("Move must be to an orthogonally adjacent cell.")
+    tx, ty, tz = action.to_position
+    if not (
+        0 <= tx < state.board.width
+        and 0 <= ty < state.board.height
+        and 0 <= tz < state.board.max_layers
+    ):
+        raise InvalidActionError("Position out of bounds.")
+
+    from_cell = get_cell(state.board, action.from_position)
+    if action.fauna_id not in from_cell.fauna:
+        raise InvalidActionError(f"No {action.fauna_id} to move at origin.")
+
+    to_cell = get_cell(state.board, action.to_position)
+    if to_cell.occupant is None:
+        raise InvalidActionError("Small fish must move onto a coral.")
+    free = effective_habitat_capacity(state, to_cell) - occupied_habitat(state, to_cell)
+    if free < fauna_habitat_cost(state, action.fauna_id, to_cell.occupant.coral_id):
+        raise InvalidActionError("Not enough habitat capacity on the destination coral.")
 
 
 def _validate_place_soil(state, action: PlaceSoilAction) -> None:

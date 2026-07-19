@@ -6,7 +6,16 @@ class BaseAgent(ABC):
     def choose_action(self, state, legal_actions):
         raise NotImplementedError
 
-    def choose_instinct(self, state, player_id, options):
-        """Escolhe 1 das cartas de Instinto oferecidas. Padrão: a primeira do baralho
-        (que já vem embaralhado por seed, então varia entre partidas)."""
-        return options[0] if options else None
+    def choose_card(self, state, player_id, offer):
+        """Escolhe 1 carta da oferta de pond (Instinto OU Upgrade). Padrão simples que
+        alterna entre os tipos para exercitar ambos: pega Upgrade quando o jogador tem
+        menos upgrades que instintos-extra; senão pega Instinto."""
+        instincts = offer.get("instincts") or []
+        upgrades = offer.get("upgrades") or []
+        player = state.players[player_id]
+        extra_instincts = max(0, len(player.instinct_cards) - 1)
+        if upgrades and len(player.upgrade_cards) <= extra_instincts:
+            return upgrades[0]
+        if instincts:
+            return instincts[0]
+        return upgrades[0] if upgrades else None

@@ -160,6 +160,10 @@ GREEN_CHROMIS_ID = "green_chromis"
 SEA_CUCUMBER_ID = "sea_cucumber"
 MOON_JELLY_ID = "moon_jelly"
 SANDY_BED_ID = "sandy_bed"
+# Upgrades
+SLOW_METABOLIST_ID = "slow_metabolist"
+SABER_TEETH_ID = "saber_teeth"
+SAFE_NURSERY_ID = "safe_nursery"
 SEAGRASS_ID = "seagrass_meadow"
 
 
@@ -177,8 +181,14 @@ def count_fauna_on_board(state, fauna_id) -> int:
     return sum(cell.fauna.count(fauna_id) for cell in state.board.cells.values())
 
 
+def _diagonal_same_layer(position):
+    x, y, z = position
+    return [(x + 1, y + 1, z), (x + 1, y - 1, z), (x - 1, y + 1, z), (x - 1, y - 1, z)]
+
+
 def has_patrol_neighbor(state, position) -> bool:
-    """Há um predador patrulhando numa célula vizinha (mesma camada)?"""
+    """Há um predador patrulhando numa célula vizinha? Ortogonal sempre; diagonal apenas
+    para predadores cujo dono tem o upgrade Saber Teeth."""
     for pos in same_layer_neighbors(position):
         cell = state.board.cells.get(pos)
         if cell is None:
@@ -186,6 +196,18 @@ def has_patrol_neighbor(state, position) -> bool:
         for fauna_id in cell.fauna:
             fauna = state.available_fauna.get(fauna_id)
             if fauna is not None and fauna.patrol:
+                return True
+    for pos in _diagonal_same_layer(position):
+        cell = state.board.cells.get(pos)
+        if cell is None:
+            continue
+        for fauna_id, f_owner in cell.fauna_with_owners():
+            fauna = state.available_fauna.get(fauna_id)
+            if (
+                fauna is not None
+                and fauna.patrol
+                and SABER_TEETH_ID in state.players[f_owner].upgrade_cards
+            ):
                 return True
     return False
 
@@ -215,6 +237,30 @@ def occupied_habitat(state, cell) -> int:
         return 0
     coral_id = cell.occupant.coral_id
     return sum(fauna_habitat_cost(state, fauna_id, coral_id) for fauna_id in cell.fauna)
+
+
+def effective_habitat_capacity(state, cell) -> int:
+    """Capacidade habitacional do coral, dobrada se o dono tem o upgrade Slow Metabolist."""
+    if cell.occupant is None:
+        return 0
+    base = state.available_corals[cell.occupant.coral_id].habitat_capacity
+    if SLOW_METABOLIST_ID in state.players[cell.occupant.owner].upgrade_cards:
+        return base * 2
+    return base
+
+
+def grant_small_fish_death_bonus(state, fauna_id, owner) -> None:
+    """Safe Nursery: quando um peixe pequeno do jogador morre, ele gera 1 Plâncton."""
+    fauna = state.available_fauna.get(fauna_id)
+    if fauna is None or not fauna.is_small_fish:
+        return
+    if SAFE_NURSERY_ID not in state.players[owner].upgrade_cards:
+        return
+    player = state.players[owner]
+    player.resources[ResourceType.PLANKTON] = player.resources.get(ResourceType.PLANKTON, 0) + 1
+    player.produced_resources[ResourceType.PLANKTON] = (
+        player.produced_resources.get(ResourceType.PLANKTON, 0) + 1
+    )
 
 
 def _count_owned_soil(state, owner, soil_id) -> int:
@@ -334,7 +380,7 @@ def _instinct_full_habitat_corals(state, owner) -> int:
     """Corais do jogador com capacidade habitacional 100% ocupada."""
     count = 0
     for cell in _owned_coral_cells(state, owner):
-        cap = state.available_corals[cell.occupant.coral_id].habitat_capacity
+        cap = effective_habitat_capacity(state, cell)
         if cap > 0 and occupied_habitat(state, cell) >= cap:
             count += 1
     return count

@@ -1,6 +1,7 @@
 from ..engine.actions import (
     BuyCoralsAction,
     MoveFaunaAction,
+    MoveSmallFishAction,
     PassAction,
     PlaceCoralAction,
     PlaceSoilAction,
@@ -108,6 +109,28 @@ def enumerate_legal_actions(state):
                 except InvalidActionError:
                     pass
 
+    # Attraction Pheromones (bônus grátis 1x/turno): mover 1 small fish (seu ou do inimigo)
+    # para um coral adjacente.
+    if (
+        "attraction_pheromones" in state.players[active].upgrade_cards
+        and not state.players[active].moved_small_fish_this_turn
+    ):
+        for pos, cell in state.board.cells.items():
+            for fid in set(cell.fauna):
+                fauna = state.available_fauna.get(fid)
+                if fauna is None or not fauna.is_small_fish:
+                    continue
+                for dest in orthogonal_neighbors_3d(pos):
+                    dcell = state.board.cells.get(dest)
+                    if dcell is None or dcell.occupant is None:
+                        continue
+                    action = MoveSmallFishAction(fauna_id=fid, from_position=pos, to_position=dest)
+                    try:
+                        validate_action(state, action)
+                        actions.append(action)
+                    except InvalidActionError:
+                        pass
+
     # Staghorn ability: pair placements over independently-legal staghorn spots.
     # (Pairs where the second staghorn stacks directly on the first are supported
     # by the engine but not enumerated here.)
@@ -126,14 +149,22 @@ def enumerate_legal_actions(state):
 
 
 def _resolve_instinct_offers(state, agents: dict) -> None:
-    """Resolve ofertas de Instinto pendentes (inicial + de ponds): o agente escolhe 1
-    de cada oferta; as não-escolhidas são descartadas."""
+    """Resolve ofertas de carta pendentes (inicial + de ponds): o agente escolhe 1 carta
+    (Instinto OU Upgrade) de cada oferta; as não-escolhidas são descartadas."""
     changed = False
     for pid, player in state.players.items():
-        while player.pending_instinct_offers:
-            offer = player.pending_instinct_offers.pop(0)
-            choice = agents[pid].choose_instinct(state, pid, offer) or offer[0]
-            if choice not in player.instinct_cards:
+        while player.pending_card_offers:
+            offer = player.pending_card_offers.pop(0)
+            candidates = list(offer.get("instincts", [])) + list(offer.get("upgrades", []))
+            if not candidates:
+                continue
+            choice = agents[pid].choose_card(state, pid, offer)
+            if choice not in candidates:
+                choice = candidates[0]
+            if choice in offer.get("upgrades", []):
+                if choice not in player.upgrade_cards:
+                    player.upgrade_cards.append(choice)
+            elif choice not in player.instinct_cards:
                 player.instinct_cards.append(choice)
             changed = True
     if changed:

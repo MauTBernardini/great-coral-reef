@@ -1,0 +1,34 @@
+# Cartas de "Upgrade": melhoram o board no PRESENTE (efeitos permanentes enquanto
+# possuídas), em contraste com os Instintos (pontuação de fim de jogo).
+# Ao fechar uma pond, o jogador escolhe 1 entre 2 Instintos OU 1 entre 2 Upgrades.
+# Teto: 3 cartas de pond (instinto+upgrade combinados) além do instinto inicial.
+#
+#   effect -> chave usada no engine para aplicar o efeito.
+upgrades:
+  - upgrade_id: safe_nursery
+    name: Safe Nursery
+    effect: plankton_on_small_fish_death
+    # Quando um peixe pequeno SEU morre (sacrifício), você gera 1 Plâncton.
+
+  - upgrade_id: saber_teeth
+    name: Saber Teeth
+    effect: predators_patrol_diagonal
+    # Seus predadores também patrulham (bloqueiam fauna) nas diagonais.
+
+  - upgrade_id: slow_metabolist
+    name: Slow Metabolist
+    effect: double_habitat_capacity
+    # Seus corais abrigam até 2x a capacidade habitacional normal.
+
+  - upgrade_id: attraction_pheromones
+    name: Attraction Pheromones
+    effect: move_small_fish_including_enemy
+    # Bônus grátis 1x/turno: mover 1 small fish (seu OU do inimigo) para um coral
+    # adjacente. Só reposiciona (a posse do peixe não muda).
+
+  # --- PENDENTE (mecânica não existe; a alinhar) ---
+  # - upgrade_id: calm_waters
+  #   name: Calm Waters
+  #   effect: pond_interior_climate_immune
+  #   # Exige 'interior de pond' (nosso laço 2x2 não tem) e clima POR CÉLULA
+  #   # (hoje o clima é global: só temperatura/era). Fora por ora.

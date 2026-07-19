@@ -9,6 +9,7 @@ from ..engine.models import (
     FaunaDefinition,
     InstinctDefinition,
     SoilDefinition,
+    UpgradeDefinition,
 )
 
 
@@ -34,6 +35,8 @@ def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
             deck_count=item.get("deck_count", 0),
             o2=item.get("o2", 0),
             habitat_capacity=item.get("habitat_capacity", 0),
+            types=[str(t).lower() for t in item.get("types", [])],
+            thermal_resistance=item.get("thermal_resistance"),
         )
         result[coral.coral_id] = coral
 
@@ -98,6 +101,19 @@ def load_instincts(path: str | Path) -> dict[str, InstinctDefinition]:
             rule=item["rule"],
         )
         result[inst.instinct_id] = inst
+    return result
+
+
+def load_upgrades(path: str | Path) -> dict[str, UpgradeDefinition]:
+    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    result = {}
+    for item in data.get("upgrades", []):
+        up = UpgradeDefinition(
+            upgrade_id=item["upgrade_id"],
+            name=item["name"],
+            effect=item["effect"],
+        )
+        result[up.upgrade_id] = up
     return result
 
 

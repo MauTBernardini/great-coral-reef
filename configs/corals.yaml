@@ -2,6 +2,9 @@
 # (a "disponibilidade" do coral). Compra-se cartas do baralho para a mão (teto de 10)
 # e constrói-se corais gastando a carta correspondente da mão.
 # Total do baralho: 16+12+16+8+8+12+16+12 = 100 cartas (proporção ×2).
+#
+# types = tipos descritivos (hard/soft, massive/branching, nps).
+# thermal_resistance = low | average | high | null ("-", sem classificação).
 corals:
   - coral_id: staghorn
     name: Staghorn Coral
@@ -14,6 +17,8 @@ corals:
     deck_count: 16
     o2: 1
     habitat_capacity: 2
+    types: [hard, branching]
+    thermal_resistance: high
 
   - coral_id: elkhorn
     name: Elkhorn Coral
@@ -26,6 +31,8 @@ corals:
     deck_count: 12
     o2: 1
     habitat_capacity: 2
+    types: [hard, branching]
+    thermal_resistance: null
 
   - coral_id: grooved_brain_coral
     name: Grooved Brain Coral
@@ -38,6 +45,8 @@ corals:
     deck_count: 16
     o2: 1
     habitat_capacity: 1
+    types: [hard, massive]
+    thermal_resistance: low
 
   - coral_id: fox_coral
     name: Fox Coral
@@ -54,6 +63,8 @@ corals:
     deck_count: 8
     o2: 1
     habitat_capacity: 1
+    types: [hard, massive]
+    thermal_resistance: low
 
   - coral_id: sun_coral
     name: Sun Coral
@@ -68,6 +79,8 @@ corals:
     deck_count: 8
     o2: 0
     habitat_capacity: 1
+    types: [soft, massive, nps]
+    thermal_resistance: null
 
   - coral_id: gorgonian_sea_fan
     name: Gorgonian Sea Fan
@@ -82,6 +95,8 @@ corals:
     deck_count: 12
     o2: 0
     habitat_capacity: 2
+    types: [soft, branching, nps]
+    thermal_resistance: null
 
   - coral_id: branched_finger_coral
     name: Branched Finger Coral
@@ -95,6 +110,8 @@ corals:
     deck_count: 16
     o2: 1
     habitat_capacity: 1
+    types: [hard, branching]
+    thermal_resistance: average
 
   - coral_id: bubble_coral
     name: Bubble Coral
@@ -110,3 +127,5 @@ corals:
     deck_count: 12
     o2: 1
     habitat_capacity: 1
+    types: [hard, massive]
+    thermal_resistance: average
