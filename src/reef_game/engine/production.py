@@ -6,9 +6,10 @@ bonuses. Today the only ability contributor is the Elkhorn cluster bonus.
 """
 
 from .enums import ResourceType
-from .scoring import score_fauna
+from .scoring import _count_adjacent_seagrass, score_fauna
 
 ELKHORN_ID = "elkhorn"
+DUGONG_ID = "dugong"
 
 
 def _sacrifice_lowest_fauna(state, owner, count):
@@ -108,6 +109,11 @@ def resolve_production(state) -> dict:
             if fauna is not None:
                 for resource, amount in fauna.production.items():
                     gains[occupant.owner][resource] += amount
+            # Dugong: com >=2 Seagrass adjacentes, cada uma dá +1 Plâncton ao dono.
+            if fauna_id == DUGONG_ID:
+                seagrass = _count_adjacent_seagrass(state, cell.position)
+                if seagrass >= 2:
+                    gains[occupant.owner][ResourceType.PLANKTON] += seagrass
 
     for player_id, player in state.players.items():
         for resource, amount in gains[player_id].items():

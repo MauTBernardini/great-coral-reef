@@ -1,15 +1,15 @@
 # Cartas de fauna. Compartilham o baralho e a mão com os corais.
 # Jogadas sobre um coral seu, ocupando capacidade habitacional (habitat_cost).
 # deck_count = disponibilidade: quanto mais caro (Sol+Plâncton), mais raro; Parrotfish o mais raro.
-# Habilidades dormentes (dependem de conteúdo futuro):
-#   - Clownfish: "anemona" não existe ainda -> jogada grátis/produção extra não disparam.
-#   - Mandarin Dragonet: "imune a predadores" -> sem efeito até existirem predadores.
+# is_small_fish: pode ser sacrificado como custo (ex.: do Blacktip Reef Shark).
+# Habilidade dormente: "anemona" do Clownfish ainda não existe.
 fauna:
   - fauna_id: clownfish
     name: Clownfish
     cost:
       plankton: 1
     deck_count: 6
+    is_small_fish: true
     # Scoring: 2 fixo. Habilidade da anêmona dormente.
 
   - fauna_id: damselfish
@@ -17,6 +17,7 @@ fauna:
     cost:
       sun: 1
     deck_count: 6
+    is_small_fish: true
     # Scoring: 1 fixo.
 
   - fauna_id: seahorse
@@ -24,6 +25,7 @@ fauna:
     cost:
       plankton: 1
     deck_count: 6
+    is_small_fish: true
     # Não ocupa capacidade se o coral for Gorgonian Sea Fan (tratado no habitat_cost).
     # Scoring: 1 por Seagrass Meadow adjacente.
 
@@ -32,8 +34,9 @@ fauna:
     cost:
       plankton: 2
     deck_count: 4
-    # Só pode ser jogado num coral em coluna Rocky Reef; imune a predadores (dormente).
+    # Só pode ser jogado num coral em coluna Rocky Reef; IMUNE a predadores.
     required_soil: rocky_reef
+    predator_immune: true
     # Scoring: 5 fixo.
 
   - fauna_id: parrotfish
@@ -48,6 +51,7 @@ fauna:
     cost: {}
     base_points: 1
     deck_count: 8
+    is_small_fish: true
     # O vertebrado mais abundante: ao ser jogada, saca 1 carta imediatamente.
     on_play_draw: 1
 
@@ -57,6 +61,7 @@ fauna:
       plankton: 1
     base_points: 1
     deck_count: 6
+    is_small_fish: true
     # Produz +1 Sol na Fase de Produção.
     production:
       sun: 1
@@ -67,6 +72,7 @@ fauna:
       plankton: 2
     base_points: 4
     deck_count: 4
+    is_small_fish: true
 
   - fauna_id: leafy_seadragon
     name: Leafy Seadragon
@@ -76,3 +82,71 @@ fauna:
     deck_count: 2
     # Enquanto no board, cada "explore" (compra de cartas) saca +1.
     explore_bonus: 1
+
+  - fauna_id: blacktip_reef_shark
+    name: Blacktip Reef Shark
+    cost: {}
+    base_points: 0
+    deck_count: 2
+    # Custo: sacrificar 1 peixe pequeno do seu board.
+    sacrifice_small_fish: 1
+    # Patrol: bloqueia outra fauna nos tiles adjacentes (exceto fauna imune a predadores).
+    patrol: true
+    # Scoring: 3 por tile adjacente (mesma camada) vazio.
+
+  - fauna_id: dugong
+    name: Dugong
+    cost:
+      sun: 3
+    base_points: 4
+    deck_count: 3
+    # Requer >=2 Seagrass adjacentes: cada um produz +1 Plâncton para o dono do Dugong.
+    # Scoring: 4 fixo.
+
+  - fauna_id: moon_jelly
+    name: Moon Jelly
+    cost:
+      plankton: 1
+    base_points: 1
+    deck_count: 6
+    # Não ocupa capacidade habitacional.
+    habitat_cost: 0
+    is_small_fish: true
+    # (Simplificado: movimento/rastreio de tiles visitados fica para depois; pontua 1.)
+
+  - fauna_id: anthias
+    name: Anthias
+    cost:
+      plankton: 1
+    base_points: 0
+    deck_count: 6
+    is_small_fish: true
+    # Requisito: 2 camadas mais altas (z=1 ou z=2).
+    allowed_layers: [1, 2]
+    # Ao jogar: +1 Plâncton se houver outro Anthias (seu) num tile adjacente.
+    # Scoring: 1 por Anthias (seu) ligado (adjacente).
+
+  - fauna_id: green_chromis
+    name: Green Chromis
+    cost:
+      sun: 1
+    base_points: 0
+    deck_count: 6
+    is_small_fish: true
+    # Empilha livremente (não ocupa capacidade) para formar cardumes.
+    habitat_cost: 0
+    # Ao jogar num tile que já tem um Green Chromis: recupere 1 Sol.
+    # Scoring: 1; se >=3 no mesmo tile, cada um scorea 2.
+
+  - fauna_id: sea_cucumber
+    name: Sea Cucumber
+    cost:
+      sun: 1
+    base_points: 0
+    deck_count: 6
+    # Requisito: coral em coluna Sandy Bed.
+    required_soil: sandy_bed
+    # "Tap" na produção: gera +1 Plâncton.
+    production:
+      plankton: 1
+    # Scoring: 1 ponto para cada 2 Sea Cucumbers no BOARD (de qualquer jogador).

@@ -152,8 +152,52 @@ DAMSELFISH_ID = "damselfish"
 MANDARIN_ID = "mandarin_dragonet"
 SEAHORSE_ID = "seahorse"
 PARROTFISH_ID = "parrotfish"
+SHARK_ID = "blacktip_reef_shark"
+ANTHIAS_ID = "anthias"
+GREEN_CHROMIS_ID = "green_chromis"
+SEA_CUCUMBER_ID = "sea_cucumber"
 SANDY_BED_ID = "sandy_bed"
 SEAGRASS_ID = "seagrass_meadow"
+
+
+def count_adjacent_fauna(state, position, fauna_id, owner) -> int:
+    """Quantos ``fauna_id`` (do mesmo dono) há em tiles vizinhos de mesma camada."""
+    count = 0
+    for pos in same_layer_neighbors(position):
+        cell = state.board.cells.get(pos)
+        if cell is not None and cell.occupant is not None and cell.occupant.owner == owner:
+            count += cell.fauna.count(fauna_id)
+    return count
+
+
+def count_fauna_on_board(state, fauna_id) -> int:
+    return sum(cell.fauna.count(fauna_id) for cell in state.board.cells.values())
+
+
+def has_patrol_neighbor(state, position) -> bool:
+    """Há um predador patrulhando numa célula vizinha (mesma camada)?"""
+    for pos in same_layer_neighbors(position):
+        cell = state.board.cells.get(pos)
+        if cell is None:
+            continue
+        for fauna_id in cell.fauna:
+            fauna = state.available_fauna.get(fauna_id)
+            if fauna is not None and fauna.patrol:
+                return True
+    return False
+
+
+def player_small_fish(state, owner):
+    """Lista de (cell, fauna_id) de peixes pequenos do jogador no board."""
+    result = []
+    for cell in state.board.cells.values():
+        occupant = cell.occupant
+        if occupant is not None and occupant.owner == owner:
+            for fauna_id in cell.fauna:
+                fauna = state.available_fauna.get(fauna_id)
+                if fauna is not None and fauna.is_small_fish:
+                    result.append((cell, fauna_id))
+    return result
 
 
 def fauna_habitat_cost(state, fauna_id, coral_id) -> int:
@@ -199,6 +243,16 @@ def score_fauna(state, fauna_id, position, owner) -> int:
         return _count_adjacent_seagrass(state, position)
     if fauna_id == PARROTFISH_ID:
         return 1 + _count_owned_soil(state, owner, SANDY_BED_ID)
+    if fauna_id == SHARK_ID:
+        return 3 * _count_empty_same_layer_neighbors(state, position)
+    if fauna_id == ANTHIAS_ID:
+        return count_adjacent_fauna(state, position, ANTHIAS_ID, owner)
+    if fauna_id == GREEN_CHROMIS_ID:
+        cell = state.board.cells.get(position)
+        on_tile = cell.fauna.count(GREEN_CHROMIS_ID) if cell is not None else 0
+        return 2 if on_tile >= 3 else 1
+    if fauna_id == SEA_CUCUMBER_ID:
+        return count_fauna_on_board(state, SEA_CUCUMBER_ID) // 2
     return state.available_fauna[fauna_id].base_points
 
 

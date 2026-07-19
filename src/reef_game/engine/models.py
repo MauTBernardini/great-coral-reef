@@ -67,14 +67,24 @@ class FaunaDefinition:
     deck_count: int = 0
     # Capacidade habitacional que ocupa no coral (Seahorse em Gorgonian = 0, tratado à parte).
     habitat_cost: int = 1
-    # Só pode ser jogada num coral cuja base seja este solo (Mandarin: rocky_reef).
+    # Só pode ser jogada num coral cuja base seja este solo (Mandarin: rocky; Sea Cucumber: sandy).
     required_soil: Optional[str] = None
-    # Recursos que a fauna gera na Fase de Produção (Lanternfish: +1 Sol).
+    # Só pode ser jogada num coral nestas camadas (Anthias: [1, 2]).
+    allowed_layers: Optional[List[int]] = None
+    # Recursos que a fauna gera na Fase de Produção (Lanternfish/Sea Cucumber).
     production: Dict[ResourceType, int] = field(default_factory=dict)
     # Ao ser jogada, saca imediatamente N cartas do baralho (Cyclothone: 1).
     on_play_draw: int = 0
     # Enquanto no board, cada compra de cartas ("explore") saca +N (Leafy Seadragon: 1).
     explore_bonus: int = 0
+    # Conta como "peixe pequeno" (pode ser sacrificado como custo, ex.: do tubarão).
+    is_small_fish: bool = False
+    # Imune a predadores: pode ser jogada mesmo adjacente a um predador patrulhando (Mandarin).
+    predator_immune: bool = False
+    # Predador que patrulha: bloqueia outra fauna nos tiles adjacentes (Blacktip).
+    patrol: bool = False
+    # Ao ser jogada, sacrifica N peixes pequenos do seu board como custo (Blacktip: 1).
+    sacrifice_small_fish: int = 0
 
 
 @dataclass(frozen=True)

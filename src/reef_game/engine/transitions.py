@@ -11,12 +11,22 @@ from .economy import effective_cost
 from .enums import ActionType, PlayerId, ResourceType
 from .models import MAX_HAND_SIZE, PlacedCoral, PlacedSoil
 from .production import resolve_production
-from .scoring import recompute_scores
+from .scoring import (
+    count_adjacent_fauna,
+    player_small_fish,
+    recompute_scores,
+    score_fauna,
+)
 from .termination import check_game_end
 from .validators import validate_action
 
 STAGHORN_ID = "staghorn"
 STAGHORN_PAIR_PLANKTON_SURCHARGE = 1
+
+
+def _gain_resource(player, resource, amount):
+    player.resources[resource] = player.resources.get(resource, 0) + amount
+    player.produced_resources[resource] = player.produced_resources.get(resource, 0) + amount
 
 
 def apply_action(state, action, max_rounds: int | None = None):
@@ -70,6 +80,26 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
     player = state.players[state.active_player]
     fauna = state.available_fauna[action.fauna_id]
     cell = state.board.cells[action.position]
+
+    # Custo em peixes pequenos sacrificados do board (Blacktip): remove os de menor pontuação.
+    if fauna.sacrifice_small_fish > 0:
+        smalls = player_small_fish(state, state.active_player)
+        smalls.sort(key=lambda cf: score_fauna(state, cf[1], cf[0].position, state.active_player))
+        for _ in range(fauna.sacrifice_small_fish):
+            if not smalls:
+                break
+            sac_cell, sac_fauna = smalls.pop(0)
+            sac_cell.fauna.remove(sac_fauna)
+
+    # Efeitos ao jogar (antes de adicionar a carta à célula):
+    #  - Green Chromis: se o tile já tem um Green Chromis, recupera 1 Sol.
+    #  - Anthias: +1 Plâncton se houver outro Anthias (seu) num tile adjacente.
+    if action.fauna_id == "green_chromis" and "green_chromis" in cell.fauna:
+        _gain_resource(player, ResourceType.SUN, 1)
+    if action.fauna_id == "anthias" and count_adjacent_fauna(
+        state, action.position, "anthias", state.active_player
+    ) >= 1:
+        _gain_resource(player, ResourceType.PLANKTON, 1)
 
     player.hand.remove(action.fauna_id)  # gasta a carta
     cell.fauna.append(action.fauna_id)

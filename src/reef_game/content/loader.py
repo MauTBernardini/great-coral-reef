@@ -65,9 +65,14 @@ def load_fauna(path: str | Path) -> dict[str, FaunaDefinition]:
             deck_count=item.get("deck_count", 0),
             habitat_cost=item.get("habitat_cost", 1),
             required_soil=item.get("required_soil"),
+            allowed_layers=item.get("allowed_layers"),
             production={ResourceType(k): v for k, v in item.get("production", {}).items()},
             on_play_draw=item.get("on_play_draw", 0),
             explore_bonus=item.get("explore_bonus", 0),
+            is_small_fish=item.get("is_small_fish", False),
+            predator_immune=item.get("predator_immune", False),
+            patrol=item.get("patrol", False),
+            sacrifice_small_fish=item.get("sacrifice_small_fish", 0),
         )
         result[fauna.fauna_id] = fauna
 

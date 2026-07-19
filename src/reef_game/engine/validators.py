@@ -8,7 +8,13 @@ from .actions import (
 from .economy import effective_cost
 from .enums import ActionType, ResourceType
 from .models import MAX_HAND_SIZE
-from .scoring import fauna_habitat_cost, occupied_habitat, same_layer_neighbors
+from .scoring import (
+    fauna_habitat_cost,
+    has_patrol_neighbor,
+    occupied_habitat,
+    player_small_fish,
+    same_layer_neighbors,
+)
 from .state import get_cell
 
 STAGHORN_ID = "staghorn"
@@ -74,6 +80,9 @@ def _validate_play_fauna(state, action: PlayFaunaAction) -> None:
         raise InvalidActionError("Fauna must be played on your own coral.")
 
     fauna = state.available_fauna[action.fauna_id]
+    if fauna.allowed_layers is not None and z not in fauna.allowed_layers:
+        raise InvalidActionError(f"Fauna {action.fauna_id} cannot be played on layer {z}.")
+
     if fauna.required_soil is not None:
         base = get_cell(state.board, (x, y, 0))
         if base.soil is None or base.soil.soil_id != fauna.required_soil:
@@ -83,6 +92,15 @@ def _validate_play_fauna(state, action: PlayFaunaAction) -> None:
     free = coral_def.habitat_capacity - occupied_habitat(state, cell)
     if free < fauna_habitat_cost(state, action.fauna_id, coral.coral_id):
         raise InvalidActionError("Not enough habitat capacity on the coral.")
+
+    # Patrulha de predador: bloqueia fauna adjacente, exceto se ela for imune.
+    if not fauna.predator_immune and has_patrol_neighbor(state, action.position):
+        raise InvalidActionError("Blocked by an adjacent patrolling predator.")
+
+    # Custo em peixes pequenos sacrificados do board (Blacktip).
+    if fauna.sacrifice_small_fish > 0:
+        if len(player_small_fish(state, state.active_player)) < fauna.sacrifice_small_fish:
+            raise InvalidActionError("Requires small fish on your board to sacrifice.")
 
     for resource, amount in fauna.cost.values.items():
         if player.resources.get(resource, 0) < amount:
