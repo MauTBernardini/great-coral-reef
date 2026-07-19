@@ -12,6 +12,7 @@ from reef_game.simulation.tournament import (
     TournamentConfig,
     run_paired_tournament,
     run_tournament,
+    summarize_by_agent,
     summarize_paired,
     summarize_tournament,
 )
@@ -26,6 +27,7 @@ def main(
     p2: str = "greedy",
     no_progress: bool = False,
     paired: bool = False,
+    randomize_seats: bool = False,
 ):
     config = TournamentConfig(
         games=games,
@@ -39,6 +41,7 @@ def main(
         agent_p1=p1,
         agent_p2=p2,
         show_progress=not no_progress,
+        randomize_seats=randomize_seats,
     )
 
     if paired:
@@ -61,8 +64,10 @@ def main(
         )
     else:
         df = run_tournament(config)
+        print(f"Agentes: P1={p1}  P2={p2}  (randomize_seats={randomize_seats})")
         print(df.head().to_string(index=False))
-        print(summarize_tournament(df))
+        print("Resumo por posicao:", summarize_tournament(df))
+        print("Resumo por AGENTE:", summarize_by_agent(df))
 
     if "artifact_dir" in df.attrs:
         print(f"Saved artifacts to: {df.attrs['artifact_dir']}")

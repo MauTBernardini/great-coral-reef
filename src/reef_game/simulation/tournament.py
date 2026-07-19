@@ -1,3 +1,4 @@
+import random
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,6 +39,9 @@ class TournamentConfig:
     # Estado turno a turno: CSV longo (metricas por jogador) + JSONL detalhado (board + mao).
     save_turn_states: bool = True
     save_turn_states_detail: bool = True
+    # Aleatoriza (por seed) qual agente ocupa a cadeira P1/P2, para comparar por AGENTE
+    # em vez de por ordem de turno. As colunas p1_agent/p2_agent registram a atribuição real.
+    randomize_seats: bool = False
 
 
 AGENT_FACTORY = {
@@ -57,6 +61,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
     coral_ids = sorted(corals.keys())
     soil_ids = sorted(soils.keys())
+    seat_rng = random.Random(config.seed_start) if config.randomize_seats else None
 
     rows = []
     turn_state_rows = []
@@ -76,21 +81,32 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             soil_definitions=soils,
             flora_definitions=flora,
         )
+        # Atribuição de agente a cada cadeira (opcionalmente trocada por seed).
+        p1_agent, p2_agent = config.agent_p1, config.agent_p2
+        if seat_rng is not None and seat_rng.random() < 0.5:
+            p1_agent, p2_agent = p2_agent, p1_agent
+
         agents = {
-            PlayerId.P1: AGENT_FACTORY[config.agent_p1](seed),
-            PlayerId.P2: AGENT_FACTORY[config.agent_p2](seed + 1),
+            PlayerId.P1: AGENT_FACTORY[p1_agent](seed),
+            PlayerId.P2: AGENT_FACTORY[p2_agent](seed + 1),
         }
         final_state, summary, telemetry = run_game(
             state, agents=agents, max_rounds=config.max_rounds
         )
 
         if config.save_turn_states:
-            turn_state_rows.extend(telemetry.to_rows())
+            for turn_row in telemetry.to_rows():
+                turn_row["p1_agent"] = p1_agent
+                turn_row["p2_agent"] = p2_agent
+                turn_row["agent"] = p1_agent if turn_row["player"] == 1 else p2_agent
+                turn_state_rows.append(turn_row)
         if config.save_turn_states_detail:
             turn_state_snapshots.extend(telemetry.states)
 
         row = {
                 "seed": seed,
+                "p1_agent": p1_agent,
+                "p2_agent": p2_agent,
                 "winner": summary["winner"],
                 "turns": summary["turns"],
                 "rounds": summary["rounds"],
@@ -266,6 +282,34 @@ def _save_paired_results(df: pd.DataFrame, config: TournamentConfig, version_con
     }
     (artifact_dir / "metadata.json").write_text(_json_dumps(metadata), encoding="utf-8")
     return artifact_dir
+
+
+def summarize_by_agent(df: pd.DataFrame) -> dict:
+    """Compara por AGENTE (não por cadeira): agrega o desempenho de cada agente
+    somando as partidas em que ele foi P1 e as em que foi P2.
+
+    Só é uma comparação *justa* quando as cadeiras foram aleatorizadas
+    (``randomize_seats``); em cadeiras fixas, cada agente aparece em uma só cadeira e
+    isto reduz às métricas por posição.
+    """
+    agent_names = sorted(set(df["p1_agent"]) | set(df["p2_agent"]))
+    result = {}
+    for agent in agent_names:
+        as_p1 = df[df["p1_agent"] == agent]
+        as_p2 = df[df["p2_agent"] == agent]
+        games = len(as_p1) + len(as_p2)
+        if games == 0:
+            continue
+        score_sum = float(as_p1["p1_score"].sum() + as_p2["p2_score"].sum())
+        wins = int((as_p1["winner"] == 1).sum() + (as_p2["winner"] == 2).sum())
+        result[agent] = {
+            "games": games,
+            "games_as_p1": len(as_p1),
+            "games_as_p2": len(as_p2),
+            "avg_score": score_sum / games,
+            "winrate": wins / games,
+        }
+    return result
 
 
 def summarize_tournament(df: pd.DataFrame) -> dict:
