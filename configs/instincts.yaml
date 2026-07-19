@@ -43,3 +43,34 @@ instincts:
     points: 2
     rule: full_habitat_corals
     # 2 pontos por coral seu 100% cheio (capacidade habitacional totalmente ocupada).
+
+  - instinct_id: energy_reserve
+    name: Energy Reserve
+    points: 1
+    rule: leftover_resources_div3
+    # 1 ponto por (Sol + Plâncton restantes) // 3 ao final do jogo.
+
+  - instinct_id: empire_of_the_frontier
+    name: Empire of the Frontier
+    points: 2
+    rule: corals_bordering_opponent
+    # 2 pontos por coral seu que faz fronteira (vizinho) com um tile do oponente.
+
+  - instinct_id: buffer_zone
+    name: Buffer Zone
+    points: 1
+    rule: empty_sandy_beds_between
+    # 1 ponto por Sandy Bed vazio entre um coral seu e um do oponente (zona-tampão).
+
+  - instinct_id: columns_of_hercules
+    name: Columns of Hercules
+    points: 4
+    rule: full_height_towers
+    # 4 pontos por torre sua completa (todas as camadas preenchidas).
+
+  - instinct_id: opportunistic_parasite
+    name: Opportunistic Parasite
+    points: 3
+    rule: parasites_on_enemy
+    # 3 pontos por fauna sua vivendo num coral inimigo. ESTA carta habilita a ação
+    # de jogar fauna em corais do oponente (parasitismo) para quem a possui.

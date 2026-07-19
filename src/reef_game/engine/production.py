@@ -26,7 +26,7 @@ def _sacrifice_lowest_fauna(state, owner, count):
         if not entries:
             break
         _, cell, fauna_id = entries.pop(0)
-        cell.fauna.remove(fauna_id)
+        cell.remove_fauna(fauna_id)
         sacrificed.append(fauna_id)
     return sacrificed
 

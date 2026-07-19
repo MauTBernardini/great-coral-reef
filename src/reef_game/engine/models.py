@@ -135,8 +135,37 @@ class Cell:
     position: Coord3D
     occupant: Optional[PlacedCoral] = None
     soil: Optional[PlacedSoil] = None
-    # Fauna morando no coral desta célula (fauna_ids); dono = dono do coral.
+    # Fauna morando no coral desta célula (fauna_ids).
     fauna: List[str] = field(default_factory=list)
+    # Dono de cada fauna, alinhado com ``fauna``. Vazio/curto => dono = dono do coral
+    # (retrocompat). Difere do dono do coral apenas em PARASITAS (fauna em coral inimigo).
+    fauna_owners: List[PlayerId] = field(default_factory=list)
+
+    def _default_fauna_owner(self) -> Optional[PlayerId]:
+        return self.occupant.owner if self.occupant is not None else None
+
+    def _pad_owners(self) -> None:
+        """Garante alinhamento: fauna não-rastreada assume o dono do coral."""
+        while len(self.fauna_owners) < len(self.fauna):
+            self.fauna_owners.append(self._default_fauna_owner())
+
+    def add_fauna(self, fauna_id: str, owner: PlayerId) -> None:
+        self._pad_owners()
+        self.fauna.append(fauna_id)
+        self.fauna_owners.append(owner)
+
+    def remove_fauna(self, fauna_id: str) -> None:
+        self._pad_owners()
+        idx = self.fauna.index(fauna_id)
+        self.fauna.pop(idx)
+        self.fauna_owners.pop(idx)
+
+    def fauna_with_owners(self):
+        """Itera (fauna_id, owner), com o dono do coral como padrão para não-rastreadas."""
+        default = self._default_fauna_owner()
+        for i, fid in enumerate(self.fauna):
+            owner = self.fauna_owners[i] if i < len(self.fauna_owners) else default
+            yield fid, (owner if owner is not None else default)
 
 
 @dataclass

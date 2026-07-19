@@ -7,6 +7,7 @@ from .actions import (
     PlaceSoilAction,
     PlaceStaghornPairAction,
     PlayFaunaAction,
+    PlayParasiteAction,
 )
 from .economy import effective_cost
 from .enums import ActionType, PlayerId, ResourceType
@@ -68,6 +69,12 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
+    if action.action_type == ActionType.PLAY_PARASITE:
+        _apply_play_parasite(next_state, action)
+        _advance_turn(next_state)
+        check_game_end(next_state, max_rounds=max_rounds)
+        return next_state
+
     if action.action_type == ActionType.MOVE_FAUNA:
         _apply_move_fauna(next_state, action)
         _advance_turn(next_state)
@@ -96,7 +103,7 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
             if not smalls:
                 break
             sac_cell, sac_fauna = smalls.pop(0)
-            sac_cell.fauna.remove(sac_fauna)
+            sac_cell.remove_fauna(sac_fauna)
 
     # Efeitos ao jogar (antes de adicionar a carta à célula):
     #  - Green Chromis: se o tile já tem um Green Chromis, recupera 1 Sol.
@@ -109,7 +116,7 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
         _gain_resource(player, ResourceType.PLANKTON, 1)
 
     player.hand.remove(action.fauna_id)  # gasta a carta
-    cell.fauna.append(action.fauna_id)
+    cell.add_fauna(action.fauna_id, state.active_player)
 
     # Fauna móvel (Moon Jelly): registra o tile inicial visitado (pontua por exploração).
     if fauna.can_move:
@@ -139,13 +146,55 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
     )
 
 
+def _apply_play_parasite(state, action: PlayParasiteAction):
+    player = state.players[state.active_player]
+    fauna = state.available_fauna[action.fauna_id]
+    cell = state.board.cells[action.position]  # coral inimigo (host)
+
+    # Custo em peixes pequenos sacrificados do SEU board (Blacktip), se aplicável.
+    if fauna.sacrifice_small_fish > 0:
+        smalls = player_small_fish(state, state.active_player)
+        smalls.sort(key=lambda cf: score_fauna(state, cf[1], cf[0].position, state.active_player))
+        for _ in range(fauna.sacrifice_small_fish):
+            if not smalls:
+                break
+            sac_cell, sac_fauna = smalls.pop(0)
+            sac_cell.remove_fauna(sac_fauna)
+
+    player.hand.remove(action.fauna_id)  # gasta a carta
+    cell.add_fauna(action.fauna_id, state.active_player)  # fauna é SUA, no coral inimigo
+
+    for resource, amount in fauna.cost.values.items():
+        player.resources[resource] -= amount
+        player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
+
+    if fauna.on_play_draw:
+        _draw_cards(state, player, fauna.on_play_draw)
+
+    score_before = player.score
+    recompute_scores(state)
+    gained = player.score - score_before
+    player.passed_last_turn = False
+    _append_history(
+        state,
+        action,
+        {
+            "result": "play_parasite",
+            "fauna_id": action.fauna_id,
+            "position": action.position,
+            "host": cell.occupant.owner.value if cell.occupant else None,
+            "points_gained": gained,
+        },
+    )
+
+
 def _apply_move_fauna(state, action: MoveFaunaAction):
     player = state.players[state.active_player]
     from_cell = state.board.cells[action.from_position]
     to_cell = state.board.cells[action.to_position]
 
-    from_cell.fauna.remove(action.fauna_id)
-    to_cell.fauna.append(action.fauna_id)
+    from_cell.remove_fauna(action.fauna_id)
+    to_cell.add_fauna(action.fauna_id, state.active_player)
     player.moved_fauna_this_round = True
 
     fauna = state.available_fauna[action.fauna_id]

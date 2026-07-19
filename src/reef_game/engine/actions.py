@@ -67,6 +67,24 @@ class PlayFaunaAction(Action):
 
 
 @dataclass(frozen=True)
+class PlayParasiteAction(Action):
+    """Jogar uma fauna da mão sobre um coral do OPONENTE (parasita).
+
+    A fauna passa a ser sua (pontua para você), mas mora no recife inimigo: ocupa a
+    capacidade do coral inimigo e compete pelo O2 do host na Produção. Só é permitido
+    a quem possui a carta de Instinto 'opportunistic_parasite'.
+    """
+
+    fauna_id: str
+    position: Tuple[int, int, int]
+
+    def __init__(self, fauna_id: str, position: Tuple[int, int, int]):
+        object.__setattr__(self, "action_type", ActionType.PLAY_PARASITE)
+        object.__setattr__(self, "fauna_id", fauna_id)
+        object.__setattr__(self, "position", position)
+
+
+@dataclass(frozen=True)
 class MoveFaunaAction(Action):
     """Mover uma fauna móvel (Moon Jelly) de um coral seu para um coral vizinho seu.
 

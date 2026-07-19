@@ -49,6 +49,10 @@ def validate_action(state, action) -> None:
         _validate_play_fauna(state, action)
         return
 
+    if action.action_type == ActionType.PLAY_PARASITE:
+        _validate_play_parasite(state, action)
+        return
+
     if action.action_type == ActionType.MOVE_FAUNA:
         _validate_move_fauna(state, action)
         return
@@ -103,6 +107,60 @@ def _validate_play_fauna(state, action: PlayFaunaAction) -> None:
         raise InvalidActionError("Blocked by an adjacent patrolling predator.")
 
     # Custo em peixes pequenos sacrificados do board (Blacktip).
+    if fauna.sacrifice_small_fish > 0:
+        if len(player_small_fish(state, state.active_player)) < fauna.sacrifice_small_fish:
+            raise InvalidActionError("Requires small fish on your board to sacrifice.")
+
+    for resource, amount in fauna.cost.values.items():
+        if player.resources.get(resource, 0) < amount:
+            raise InvalidActionError(f"Insufficient resource: {resource.value}")
+
+
+PARASITE_CARD_ID = "opportunistic_parasite"
+
+
+def _validate_play_parasite(state, action) -> None:
+    player = state.players[state.active_player]
+
+    if player.instinct_card != PARASITE_CARD_ID:
+        raise InvalidActionError("Requires the Opportunistic Parasite instinct card.")
+    if action.fauna_id not in state.available_fauna:
+        raise InvalidActionError("Unknown fauna_id.")
+    if action.fauna_id not in player.hand:
+        raise InvalidActionError(f"Fauna card {action.fauna_id} is not in hand.")
+
+    x, y, z = action.position
+    in_bounds = (
+        0 <= x < state.board.width
+        and 0 <= y < state.board.height
+        and 0 <= z < state.board.max_layers
+    )
+    if not in_bounds:
+        raise InvalidActionError("Position out of bounds.")
+
+    cell = get_cell(state.board, action.position)
+    coral = cell.occupant
+    if coral is None:
+        raise InvalidActionError("Parasite must be played on a coral.")
+    if coral.owner == state.active_player:
+        raise InvalidActionError("Parasite must be played on an ENEMY coral.")
+
+    fauna = state.available_fauna[action.fauna_id]
+    if fauna.allowed_layers is not None and z not in fauna.allowed_layers:
+        raise InvalidActionError(f"Fauna {action.fauna_id} cannot be played on layer {z}.")
+    if fauna.required_soil is not None:
+        base = get_cell(state.board, (x, y, 0))
+        if base.soil is None or base.soil.soil_id != fauna.required_soil:
+            raise InvalidActionError(f"Fauna requires a {fauna.required_soil} column.")
+
+    coral_def = state.available_corals[coral.coral_id]
+    free = coral_def.habitat_capacity - occupied_habitat(state, cell)
+    if free < fauna_habitat_cost(state, action.fauna_id, coral.coral_id):
+        raise InvalidActionError("Not enough habitat capacity on the host coral.")
+
+    if not fauna.predator_immune and has_patrol_neighbor(state, action.position):
+        raise InvalidActionError("Blocked by an adjacent patrolling predator.")
+
     if fauna.sacrifice_small_fish > 0:
         if len(player_small_fish(state, state.active_player)) < fauna.sacrifice_small_fish:
             raise InvalidActionError("Requires small fish on your board to sacrifice.")

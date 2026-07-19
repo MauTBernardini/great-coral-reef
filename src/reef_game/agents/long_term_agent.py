@@ -116,6 +116,12 @@ class LongTermAgent(BaseAgent):
             cost = sum(fauna.cost.values.values())
             return points - W_COST * cost
 
+        if action.action_type == ActionType.PLAY_PARASITE:
+            fauna = state.available_fauna[action.fauna_id]
+            points = score_fauna(state, action.fauna_id, action.position, owner)
+            cost = sum(fauna.cost.values.values())
+            return points - W_COST * cost
+
         if action.action_type == ActionType.MOVE_FAUNA:
             # Mover só compensa para um tile inédito e enquanto abaixo do teto.
             visited = state.players[owner].moon_jelly_visited

@@ -6,6 +6,7 @@ from ..engine.actions import (
     PlaceSoilAction,
     PlaceStaghornPairAction,
     PlayFaunaAction,
+    PlayParasiteAction,
 )
 from ..engine.scoring import orthogonal_neighbors_3d
 from ..engine.transitions import apply_action
@@ -71,6 +72,23 @@ def enumerate_legal_actions(state):
                 actions.append(action)
             except InvalidActionError:
                 pass
+
+    # Parasitismo: jogar fauna da mão em coral INIMIGO (só quem tem a carta de Instinto).
+    if state.players[active].instinct_card == "opportunistic_parasite":
+        enemy_coral_positions = [
+            pos for pos, cell in state.board.cells.items()
+            if cell.occupant is not None and cell.occupant.owner != active
+        ]
+        for fauna_id in set(hand):
+            if fauna_id not in state.available_fauna:
+                continue
+            for pos in enemy_coral_positions:
+                action = PlayParasiteAction(fauna_id=fauna_id, position=pos)
+                try:
+                    validate_action(state, action)
+                    actions.append(action)
+                except InvalidActionError:
+                    pass
 
     # Mover fauna móvel (Moon Jelly) para um coral seu vizinho (1x/rodada).
     own_position_set = set(own_coral_positions)

@@ -17,6 +17,7 @@ class ActionType(str, Enum):
     PLACE_STAGHORN_PAIR = "place_staghorn_pair"
     PLACE_SOIL = "place_soil"
     PLAY_FAUNA = "play_fauna"
+    PLAY_PARASITE = "play_parasite"
     MOVE_FAUNA = "move_fauna"
     BUY_CORALS = "buy_corals"
     PASS = "pass"

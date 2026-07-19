@@ -6,6 +6,8 @@ neighbouring corals, whether a coral sits on the top layer) and therefore change
 as the game progresses.
 """
 
+from .enums import PlayerId, ResourceType
+
 STAGHORN_ID = "staghorn"
 ELKHORN_ID = "elkhorn"
 GROOVED_BRAIN_ID = "grooved_brain_coral"
@@ -189,15 +191,15 @@ def has_patrol_neighbor(state, position) -> bool:
 
 
 def player_small_fish(state, owner):
-    """Lista de (cell, fauna_id) de peixes pequenos do jogador no board."""
+    """Lista de (cell, fauna_id) de peixes pequenos DO jogador (por dono da fauna)."""
     result = []
     for cell in state.board.cells.values():
-        occupant = cell.occupant
-        if occupant is not None and occupant.owner == owner:
-            for fauna_id in cell.fauna:
-                fauna = state.available_fauna.get(fauna_id)
-                if fauna is not None and fauna.is_small_fish:
-                    result.append((cell, fauna_id))
+        for fauna_id, f_owner in cell.fauna_with_owners():
+            if f_owner != owner:
+                continue
+            fauna = state.available_fauna.get(fauna_id)
+            if fauna is not None and fauna.is_small_fish:
+                result.append((cell, fauna_id))
     return result
 
 
@@ -338,6 +340,88 @@ def _instinct_full_habitat_corals(state, owner) -> int:
     return count
 
 
+def _instinct_full_height_towers(state, owner) -> int:
+    """Colunas do jogador com TODAS as camadas preenchidas (torre completa)."""
+    count = 0
+    for x in range(state.board.width):
+        for y in range(state.board.height):
+            full = True
+            for z in range(state.board.max_layers):
+                cell = state.board.cells.get((x, y, z))
+                if cell is None or cell.occupant is None or cell.occupant.owner != owner:
+                    full = False
+                    break
+            if full:
+                count += 1
+    return count
+
+
+def _instinct_parasites_on_enemy(state, owner) -> int:
+    """Fauna do jogador que vive num coral do oponente (parasitas)."""
+    count = 0
+    for cell in state.board.cells.values():
+        if cell.occupant is None or cell.occupant.owner == owner:
+            continue
+        for _fauna_id, f_owner in cell.fauna_with_owners():
+            if f_owner == owner:
+                count += 1
+    return count
+
+
+def _opponent(owner):
+    return PlayerId.P1 if owner == PlayerId.P2 else PlayerId.P2
+
+
+def _instinct_leftover_resources_div3(state, owner) -> int:
+    """Soma de Sol + Plâncton restantes ao final, dividida por 3 (arredonda p/ baixo)."""
+    r = state.players[owner].resources
+    return (r.get(ResourceType.SUN, 0) + r.get(ResourceType.PLANKTON, 0)) // 3
+
+
+def _cell_controlled_by(cell, player) -> bool:
+    """Célula 'controlada' por um jogador: tem coral dele ou solo dele."""
+    if cell.occupant is not None and cell.occupant.owner == player:
+        return True
+    return cell.soil is not None and cell.soil.owner == player
+
+
+def _instinct_corals_bordering_opponent(state, owner) -> int:
+    """Corais seus com ao menos um vizinho (mesma camada) controlado pelo oponente."""
+    opp = _opponent(owner)
+    count = 0
+    for cell in _owned_coral_cells(state, owner):
+        for npos in same_layer_neighbors(cell.position):
+            ncell = state.board.cells.get(npos)
+            if ncell is not None and _cell_controlled_by(ncell, opp):
+                count += 1
+                break
+    return count
+
+
+def _instinct_empty_sandy_beds_between(state, owner) -> int:
+    """Tiles de Sandy Bed vazios (sem coral) que fazem fronteira, ao mesmo tempo,
+    com um coral seu e um coral do oponente (uma 'zona-tampão' entre vocês)."""
+    opp = _opponent(owner)
+    count = 0
+    for (x, y, z), cell in state.board.cells.items():
+        if z != 0 or cell.occupant is not None:
+            continue
+        if cell.soil is None or cell.soil.soil_id != SANDY_BED_ID:
+            continue
+        has_you = has_opp = False
+        for npos in same_layer_neighbors((x, y, z)):
+            ncell = state.board.cells.get(npos)
+            if ncell is None or ncell.occupant is None:
+                continue
+            if ncell.occupant.owner == owner:
+                has_you = True
+            elif ncell.occupant.owner == opp:
+                has_opp = True
+        if has_you and has_opp:
+            count += 1
+    return count
+
+
 _INSTINCT_RULES = {
     "towers_reaching_surface": _instinct_towers_reaching_surface,
     "dominant_coral_type": _instinct_dominant_coral_type,
@@ -345,6 +429,11 @@ _INSTINCT_RULES = {
     "corals_on_edge": _instinct_corals_on_edge,
     "bottom_layer_connected_trios": _instinct_bottom_layer_connected_trios,
     "full_habitat_corals": _instinct_full_habitat_corals,
+    "leftover_resources_div3": _instinct_leftover_resources_div3,
+    "corals_bordering_opponent": _instinct_corals_bordering_opponent,
+    "empty_sandy_beds_between": _instinct_empty_sandy_beds_between,
+    "full_height_towers": _instinct_full_height_towers,
+    "parasites_on_enemy": _instinct_parasites_on_enemy,
 }
 
 
@@ -369,13 +458,16 @@ def compute_player_score(state, player_id) -> int:
         occupant = cell.occupant
         if occupant is not None and occupant.owner == player_id:
             total += score_coral(state, occupant)
-            for fauna_id in cell.fauna:
-                if fauna_id == MOON_JELLY_ID:
-                    # Moon Jelly pontua por tiles distintos visitados (nível do jogador),
-                    # não por ocorrência — evita dupla contagem com várias jellies.
-                    has_moon_jelly = True
-                    continue
-                total += score_fauna(state, fauna_id, cell.position, player_id)
+        # Fauna pontua para o SEU dono (difere do dono do coral só em parasitas).
+        for fauna_id, f_owner in cell.fauna_with_owners():
+            if f_owner != player_id:
+                continue
+            if fauna_id == MOON_JELLY_ID:
+                # Moon Jelly pontua por tiles distintos visitados (nível do jogador),
+                # não por ocorrência — evita dupla contagem com várias jellies.
+                has_moon_jelly = True
+                continue
+            total += score_fauna(state, fauna_id, cell.position, player_id)
     if has_moon_jelly:
         visited = len(state.players[player_id].moon_jelly_visited)
         cap = state.available_fauna[MOON_JELLY_ID].visited_score_cap
