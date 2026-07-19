@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 
 from ..engine.enums import CoralTrait, ResourceType
-from ..engine.models import CoralDefinition, Cost
+from ..engine.models import CoralDefinition, Cost, SoilDefinition
 
 
 def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
@@ -19,8 +19,28 @@ def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
             traits=[CoralTrait(t) for t in item["traits"]],
             max_height_gain=item.get("max_height_gain", 1),
             requires_support=item.get("requires_support", True),
+            allowed_layers=item.get("allowed_layers"),
+            production={ResourceType(k): v for k, v in item.get("production", {}).items()},
         )
         result[coral.coral_id] = coral
+
+    return result
+
+
+def load_soils(path: str | Path) -> dict[str, SoilDefinition]:
+    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    result = {}
+
+    for item in data["soils"]:
+        soil = SoilDefinition(
+            soil_id=item["soil_id"],
+            name=item["name"],
+            cost=Cost(values={ResourceType(k): v for k, v in item["cost"].items()}),
+            production={ResourceType(k): v for k, v in item.get("production", {}).items()},
+            coral_cost_reduction=item.get("coral_cost_reduction", 0),
+            supply=item.get("supply", 0),
+        )
+        result[soil.soil_id] = soil
 
     return result
 

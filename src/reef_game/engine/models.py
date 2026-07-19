@@ -22,6 +22,22 @@ class CoralDefinition:
     traits: List[CoralTrait]
     max_height_gain: int = 1
     requires_support: bool = True
+    allowed_layers: Optional[List[int]] = None
+    # Base resources this coral yields each Production Phase (empty = none).
+    production: Dict[ResourceType, int] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SoilDefinition:
+    soil_id: str
+    name: str
+    cost: Cost
+    # Recursos que o solo gera por Fase de Produção.
+    production: Dict[ResourceType, int] = field(default_factory=dict)
+    # Habilidade (Rocky Reef): reduz o custo (Sol) dos corais construídos na coluna.
+    coral_cost_reduction: int = 0
+    # Quantidade disponível no suprimento compartilhado.
+    supply: int = 0
 
 
 @dataclass(frozen=True)
@@ -46,9 +62,17 @@ class PlacedCoral:
 
 
 @dataclass
+class PlacedSoil:
+    soil_id: str
+    owner: PlayerId
+    position: Coord3D
+
+
+@dataclass
 class Cell:
     position: Coord3D
     occupant: Optional[PlacedCoral] = None
+    soil: Optional[PlacedSoil] = None
 
 
 @dataclass
@@ -59,6 +83,7 @@ class PlayerState:
     score: int = 0
     passed_last_turn: bool = False
     spent_resources: Dict[ResourceType, int] = field(default_factory=dict)
+    produced_resources: Dict[ResourceType, int] = field(default_factory=dict)
     placed_corals: int = 0
     dead_turns: int = 0
 
@@ -94,3 +119,5 @@ class GameState:
     action_history: List[dict] = field(default_factory=list)
     is_terminal: bool = False
     winner: Optional[PlayerId] = None
+    available_soils: Dict[str, SoilDefinition] = field(default_factory=dict)
+    soil_supply: Dict[str, int] = field(default_factory=dict)

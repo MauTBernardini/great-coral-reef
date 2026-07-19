@@ -77,9 +77,12 @@ def create_initial_state(
     coral_definitions: dict,
     balance_rules: dict | None = None,
     climate_config: dict | None = None,
+    soil_definitions: dict | None = None,
 ) -> GameState:
     balance_rules = balance_rules or _default_balance_rules()
     climate_config = climate_config or {"deck": []}
+    soil_definitions = soil_definitions or {}
+    soil_supply = {soil_id: soil.supply for soil_id, soil in soil_definitions.items()}
 
     board_cfg = balance_rules["board"]
     resource_cfg = balance_rules["players"]["initial_resources"]
@@ -102,16 +105,21 @@ def create_initial_state(
             ResourceType.PLANKTON: resource_cfg["plankton"],
         }
 
+    def zeroed():
+        return {ResourceType.SUN: 0, ResourceType.PLANKTON: 0}
+
     players = {
         PlayerId.P1: PlayerState(
             player_id=PlayerId.P1,
             resources=initial_resources(),
-            spent_resources={ResourceType.SUN: 0, ResourceType.PLANKTON: 0},
+            spent_resources=zeroed(),
+            produced_resources=zeroed(),
         ),
         PlayerId.P2: PlayerState(
             player_id=PlayerId.P2,
             resources=initial_resources(),
-            spent_resources={ResourceType.SUN: 0, ResourceType.PLANKTON: 0},
+            spent_resources=zeroed(),
+            produced_resources=zeroed(),
         ),
     }
 
@@ -132,4 +140,6 @@ def create_initial_state(
         current_era=1,
         era_thresholds=era_thresholds,
         climate_deck=build_climate_deck(seed=seed, climate_cfg=climate_deck_cfg),
+        available_soils=soil_definitions,
+        soil_supply=soil_supply,
     )

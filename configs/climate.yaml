@@ -1,7 +1,15 @@
+# pH DESABILITADO por hora: todas as cartas usam ph_steps: 0.
+# Progressão de era passa a ser 100% por temperatura.
+#
+# Net de temperatura por era (temperature_step = 0.5 C):
+#   Era 1: monotonica, sem resfriamento -> net +1.5 C (3 instancias +1). Cruza 29.0 com folga.
+#   Era 2: aquecimento denso, sem resfriamento (leva a 30.5 -> era 3).
+#   Era 3: aquecimento forte, com picos +2 (leva ao critico 32.0).
 deck:
+  # ============================ ERA 1 (net +1.5 C) ============================
   - card_id: mare-de-neve-marinha
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Maré de Neve Marinha"
     event_type: condition
     original_climate_change: "Nenhuma"
@@ -10,34 +18,34 @@ deck:
     ph_steps: 0
   - card_id: brisa-de-moncoes
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Brisa de Monções"
-    event_type: test
-    original_climate_change: "Temp -1°C"
-    effect_text: "Teste: O oceano refresca. Todos os jogadores podem curar gratuitamente 1 coral Branqueado OU mover 1 carta de Fauna para um novo coral válido."
-    temperature_steps: -1
+    event_type: condition
+    original_climate_change: "Nenhuma"
+    effect_text: "O oceano refresca. Todos os jogadores podem curar gratuitamente 1 coral Branqueado OU mover 1 carta de Fauna para um novo coral válido."
+    temperature_steps: 0
     ph_steps: 0
   - card_id: saturacao-alcalina
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Saturação Alcalina"
     event_type: condition
-    original_climate_change: "pH +0.1"
+    original_climate_change: "Nenhuma"
     effect_text: "Condição: A água está perfeita para a calcificação. Todos os Hard Corals construídos nesta rodada têm um desconto de -1 Sol (custo mínimo de 1)."
     temperature_steps: 0
-    ph_steps: -1
+    ph_steps: 0
   - card_id: correntes-de-bercario
     era: 1
-    number_of_cards: 3
+    number_of_cards: 1
     label: "Correntes de Berçário"
     event_type: condition
-    original_climate_change: "Temp +1°C"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Condição: O calor ameno acelera o ciclo de vida. Cartas de Fauna com a tag \"Larva/Ovo\" ou \"Cardume\" jogadas nesta rodada não custam ações para serem posicionadas."
     temperature_steps: 1
     ph_steps: 0
   - card_id: mare-de-plancton
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Maré de Plâncton"
     event_type: condition
     original_climate_change: "Nenhuma"
@@ -46,16 +54,16 @@ deck:
     ph_steps: 0
   - card_id: brisa-refrescante
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Brisa Refrescante"
-    event_type: test
-    original_climate_change: "Temp -1°C"
-    effect_text: "Teste: Clima ideal. Todos os jogadores podem remover 1 Token de Alga gratuitamente de qualquer lugar dos seus tabuleiros."
-    temperature_steps: -1
+    event_type: condition
+    original_climate_change: "Nenhuma"
+    effect_text: "Clima ideal. Todos os jogadores podem remover 1 Token de Alga gratuitamente de qualquer lugar dos seus tabuleiros."
+    temperature_steps: 0
     ph_steps: 0
   - card_id: mare-mansa
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Maré Mansa"
     event_type: condition
     original_climate_change: "Nenhuma"
@@ -64,46 +72,48 @@ deck:
     ph_steps: 0
   - card_id: fotossintese-plena
     era: 1
-    number_of_cards: 3
+    number_of_cards: 1
     label: "Fotossíntese Plena"
     event_type: condition
-    original_climate_change: "Temp +1°C"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Condição: Dias longos e águas cristalinas. Todo Hard Coral saudável gera +1 Sol extra na Fase de Produção, mas a temperatura global sobe."
     temperature_steps: 1
     ph_steps: 0
   - card_id: filtracao-natural
     era: 1
-    number_of_cards: 3
+    number_of_cards: 1
     label: "Filtração Natural"
-    event_type: test
-    original_climate_change: "pH +0.1"
-    effect_text: "Teste: O ecossistema purifica-se. Qualquer jogador que possua pelo menos 2 Invertebrados Filtradores (Esponjas/Ostras) pode curar 1 coral Branqueado gratuitamente."
-    temperature_steps: 0
-    ph_steps: -1
+    event_type: condition
+    original_climate_change: "Temp +0.5°C"
+    effect_text: "Condição: A água aquece de leve. Qualquer jogador que possua pelo menos 2 Invertebrados Filtradores (Esponjas/Ostras) pode curar 1 coral Branqueado gratuitamente."
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: correntes-migratorias
     era: 1
-    number_of_cards: 3
+    number_of_cards: 2
     label: "Correntes Migratórias"
     event_type: condition
     original_climate_change: "Nenhuma"
     effect_text: "Condição: O fluxo de vida é intenso. Todos os jogadores podem mover livremente qualquer quantidade da sua Fauna entre os seus próprios corais sem gastar ações."
     temperature_steps: 0
     ph_steps: 0
+
+  # ===================== ERA 2 (aquecimento denso, sem frio) =====================
   - card_id: tempestade-de-areia-submarina
     era: 2
     number_of_cards: 3
     label: "Tempestade de Areia Submarina"
     event_type: condition
-    original_climate_change: "pH -0.1"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Condição: A água fica turva. Hard Corals nas Camadas 1 e 2 geram -1 Sol nesta rodada (mínimo de zero)."
-    temperature_steps: 0
-    ph_steps: 1
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: surto-parasitario
     era: 2
     number_of_cards: 3
     label: "Surto Parasitário"
     event_type: test
-    original_climate_change: "Temp +1°C"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Teste: Água quente traz doenças. Todo coral que estiver em \"Superlotação\" (com mais peixes que sua População base) recebe 1 Token de Alga instantaneamente."
     temperature_steps: 1
     ph_steps: 0
@@ -112,7 +122,7 @@ deck:
     number_of_cards: 3
     label: "Proliferação Bacteriana"
     event_type: test
-    original_climate_change: "Temp +1°C"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Teste: A água quente acelera a decomposição. Todo Token de Excremento presente no tabuleiro evolui imediatamente para um Token de Alga Nociva, sufocando os corais antes da Fase de Limpeza."
     temperature_steps: 1
     ph_steps: 0
@@ -121,10 +131,10 @@ deck:
     number_of_cards: 3
     label: "Correntes Turvas"
     event_type: condition
-    original_climate_change: "pH -0.1"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Condição: Sedimentos bloqueiam a luz. Nenhum coral nas Camadas 1 e 2 (fundo) pode gerar Sol nesta rodada. Apenas a superfície (Camadas 3+) fotossintetiza."
-    temperature_steps: 0
-    ph_steps: 1
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: fuga-inquilina
     era: 2
     number_of_cards: 3
@@ -139,73 +149,75 @@ deck:
     number_of_cards: 3
     label: "Ciclone Subtropical"
     event_type: test
-    original_climate_change: "Temp -1°C"
-    effect_text: "Teste: O mar agita-se violentamente. Destrua e transforme em Biomassa todos os Soft Corals da Camada 3 ou superior, a menos que possuam uma carta de Fauna anexada para estabilizá-los."
-    temperature_steps: -1
+    original_climate_change: "Temp +0.5°C"
+    effect_text: "Teste: O mar agita-se e aquece. Destrua e transforme em Biomassa todos os Soft Corals da Camada 3 ou superior, a menos que possuam uma carta de Fauna anexada para estabilizá-los."
+    temperature_steps: 1
     ph_steps: 0
   - card_id: onda-de-frio-anomala
     era: 2
     number_of_cards: 3
     label: "Onda de Frio Anômala"
     event_type: condition
-    original_climate_change: "Temp -1°C"
-    effect_text: "Condição: A água esfria de repente, retardando o metabolismo. A produção global de Plâncton de todos os jogadores cai pela metade (arredondado para baixo)."
-    temperature_steps: -1
+    original_climate_change: "Nenhuma"
+    effect_text: "Condição: A produção global de Plâncton de todos os jogadores cai pela metade (arredondado para baixo)."
+    temperature_steps: 0
     ph_steps: 0
   - card_id: invasao-de-macroalgas
     era: 2
     number_of_cards: 3
     label: "Invasão de Macroalgas"
     event_type: test
-    original_climate_change: "pH -0.1"
+    original_climate_change: "Nenhuma"
     effect_text: "Teste: Algas cobrem o fundo. Coloque 1 Token de Alga em todos os tiles de terreno vazio (sem corais construídos). Estes tiles devem ser limpos (gasto de ação/recurso) antes de poderem receber novas construções."
     temperature_steps: 0
-    ph_steps: 1
+    ph_steps: 0
   - card_id: poluicao-costeira-runoff
     era: 2
     number_of_cards: 3
     label: "Poluição Costeira (Runoff)"
     event_type: test
-    original_climate_change: "pH -0.2"
-    effect_text: "Teste: Nutrientes terrestres tóxicos atingem o recife. Cada jogador deve descartar 1 O2 ou 1 Plâncton por cada Pond (lagoa) que tiver concluído. Se não puder pagar, a Pond ganha 2 Tokens de Alga."
+    original_climate_change: "Nenhuma"
+    effect_text: "Teste: Nutrientes terrestres atingem o recife. Cada jogador deve descartar 1 O2 ou 1 Plâncton por cada Pond (lagoa) que tiver concluído. Se não puder pagar, a Pond ganha 2 Tokens de Alga."
     temperature_steps: 0
-    ph_steps: 2
+    ph_steps: 0
   - card_id: tempestade-magnetica
     era: 2
     number_of_cards: 3
     label: "Tempestade Magnética"
     event_type: condition
-    original_climate_change: "Temp +1°C"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Condição: Os sentidos de navegação dos peixes falham. Todas as habilidades de cartas com a tag \"Cardume\" ficam desativadas nesta rodada e eles não geram Pontos de Vitória temporariamente."
     temperature_steps: 1
     ph_steps: 0
+
+  # ===================== ERA 3 (aquecimento forte, picos +2) =====================
   - card_id: super-tufao
     era: 3
     number_of_cards: 3
     label: "Super Tufão"
     event_type: test
-    original_climate_change: "Nenhuma"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Teste: O mar enfurece. Todos os corais da Camada 4 são imediatamente destruídos (caem e viram Biomassa). Apenas corais com a habilidade \"Imune a Tempestades\" sobrevivem."
-    temperature_steps: 0
+    temperature_steps: 1
     ph_steps: 0
   - card_id: saturacao-toxica
     era: 3
     number_of_cards: 3
     label: "Saturação Tóxica"
     event_type: condition
-    original_climate_change: "pH -0.2"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Condição: O colapso bate à porta. Nenhum jogador pode usar a ação de \"Recolonização\" (curar corais pagando Plâncton) nesta rodada. Apenas Biomassa pode curar."
-    temperature_steps: 0
-    ph_steps: 2
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: a-grande-acidez
     era: 3
     number_of_cards: 3
     label: "A Grande Acidez"
     event_type: condition
-    original_climate_change: "pH -0.3"
-    effect_text: "Condição: Os esqueletos começam a dissolver-se. Todo Hard Coral construído nesta rodada entra em jogo já sofrendo Branqueamento (virado para baixo)."
-    temperature_steps: 0
-    ph_steps: 3
+    original_climate_change: "Temp +0.5°C"
+    effect_text: "Condição: O calor implacável castiga o recife. Todo Hard Coral construído nesta rodada entra em jogo já sofrendo Branqueamento (virado para baixo)."
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: fome-abissal
     era: 3
     number_of_cards: 3
@@ -220,7 +232,7 @@ deck:
     number_of_cards: 3
     label: "Superaquecimento Crítico"
     event_type: test
-    original_climate_change: "Temp +2°C"
+    original_climate_change: "Temp +1.0°C"
     effect_text: "Teste: A água rasa ferve. Qualquer coral na Camada 3 ou 4 que não possua a tag \"Baixa Sensibilidade Térmica\" sofre Branqueamento instantâneo."
     temperature_steps: 2
     ph_steps: 0
@@ -229,10 +241,10 @@ deck:
     number_of_cards: 3
     label: "Erosão em Cascata"
     event_type: test
-    original_climate_change: "pH -0.2"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Teste: Imediato. Qualquer tile de Coral Morto que não tenha sido coberto por uma nova construção espalha 1 Token de Alga para todos os corais diretamente adjacentes a ele."
-    temperature_steps: 0
-    ph_steps: 2
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: zona-morta-anoxia
     era: 3
     number_of_cards: 3
@@ -247,16 +259,16 @@ deck:
     number_of_cards: 3
     label: "Colapso Estrutural"
     event_type: test
-    original_climate_change: "pH -0.2"
+    original_climate_change: "Temp +0.5°C"
     effect_text: "Teste: O mar cobra o seu preço. Todo Hard Coral que já estiver no estado Branqueado (carta virada) sofre imediatamente o segundo dano (é destruído e vira Biomassa, derrubando o que estiver acima)."
-    temperature_steps: 0
-    ph_steps: 2
+    temperature_steps: 1
+    ph_steps: 0
   - card_id: el-nino-implacavel
     era: 3
     number_of_cards: 3
     label: "El Niño Implacável"
     event_type: condition
-    original_climate_change: "Temp +2°C"
+    original_climate_change: "Temp +1.0°C"
     effect_text: "Condição: O calor é paralisante. Se o marcador de Temperatura atingir 30°C ou mais com esta carta, a Fase de Produção é completamente pulada nesta rodada. Ninguém gera recursos."
     temperature_steps: 2
     ph_steps: 0
@@ -265,7 +277,7 @@ deck:
     number_of_cards: 3
     label: "Maré Negra"
     event_type: test
-    original_climate_change: "pH -0.3"
-    effect_text: "Teste: Uma catástrofe sombria bloqueia o sol. Adicione 2 Tokens de Alga a todos os corais da Camada 4. Além disso, o custo em ações/recursos para limpar Algas nesta rodada é dobrado para todos os jogadores."
-    temperature_steps: 0
-    ph_steps: 3
+    original_climate_change: "Temp +0.5°C"
+    effect_text: "Teste: Uma catástrofe sombria bloqueia o sol e a água estagna quente. Adicione 2 Tokens de Alga a todos os corais da Camada 4. Além disso, o custo em ações/recursos para limpar Algas nesta rodada é dobrado para todos os jogadores."
+    temperature_steps: 1
+    ph_steps: 0

@@ -13,6 +13,8 @@ class PlayerId(int, Enum):
 
 class ActionType(str, Enum):
     PLACE_CORAL = "place_coral"
+    PLACE_STAGHORN_PAIR = "place_staghorn_pair"
+    PLACE_SOIL = "place_soil"
     PASS = "pass"
 
 

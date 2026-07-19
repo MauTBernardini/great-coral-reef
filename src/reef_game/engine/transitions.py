@@ -1,11 +1,16 @@
 from copy import deepcopy
 
-from .actions import PlaceCoralAction
-from .enums import ActionType, PlayerId
-from .models import PlacedCoral
-from .scoring import score_incremental_after_placement
+from .actions import PlaceCoralAction, PlaceSoilAction, PlaceStaghornPairAction
+from .economy import effective_cost
+from .enums import ActionType, PlayerId, ResourceType
+from .models import PlacedCoral, PlacedSoil
+from .production import resolve_production
+from .scoring import recompute_scores
 from .termination import check_game_end
 from .validators import validate_action
+
+STAGHORN_ID = "staghorn"
+STAGHORN_PAIR_PLANKTON_SURCHARGE = 1
 
 
 def apply_action(state, action, max_rounds: int | None = None):
@@ -27,30 +32,80 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
+    if action.action_type == ActionType.PLACE_STAGHORN_PAIR:
+        _apply_place_staghorn_pair(next_state, action)
+        _advance_turn(next_state)
+        check_game_end(next_state, max_rounds=max_rounds)
+        return next_state
+
+    if action.action_type == ActionType.PLACE_SOIL:
+        _apply_place_soil(next_state, action)
+        _advance_turn(next_state)
+        check_game_end(next_state, max_rounds=max_rounds)
+        return next_state
+
     raise ValueError("Unsupported action type.")
 
 
-def _apply_place_coral(state, action: PlaceCoralAction):
+def _apply_place_soil(state, action: PlaceSoilAction):
     player = state.players[state.active_player]
-    coral = state.available_corals[action.coral_id]
+    soil = state.available_soils[action.soil_id]
     cell = state.board.cells[action.position]
 
-    instance_id = f"{action.coral_id}_{state.turn}_{state.active_player.value}"
-    placed = PlacedCoral(
-        instance_id=instance_id,
-        coral_id=action.coral_id,
+    cell.soil = PlacedSoil(
+        soil_id=action.soil_id,
         owner=state.active_player,
         position=action.position,
     )
-    cell.occupant = placed
+    state.soil_supply[action.soil_id] = state.soil_supply.get(action.soil_id, 0) - 1
 
-    for resource, amount in coral.cost.values.items():
+    for resource, amount in soil.cost.values.items():
+        player.resources[resource] -= amount
+        player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
+
+    player.passed_last_turn = False
+    _append_history(
+        state,
+        action,
+        {
+            "soil_id": action.soil_id,
+            "position": action.position,
+            "result": "place_soil",
+        },
+    )
+
+
+def _place_coral_on_board(state, coral_id, position) -> str:
+    """Commit one coral to the board and pay its (effective) cost. Returns its id."""
+    player = state.players[state.active_player]
+    coral = state.available_corals[coral_id]
+    cell = state.board.cells[position]
+
+    px, py, pz = position
+    instance_id = f"{coral_id}_{state.turn}_{state.active_player.value}_{px}{py}{pz}"
+    cell.occupant = PlacedCoral(
+        instance_id=instance_id,
+        coral_id=coral_id,
+        owner=state.active_player,
+        position=position,
+    )
+
+    for resource, amount in effective_cost(state, coral, position).items():
         player.resources[resource] -= amount
         player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
 
     player.placed_corals += 1
-    gained = score_incremental_after_placement(state, placed)
-    player.score += gained
+    return instance_id
+
+
+def _apply_place_coral(state, action: PlaceCoralAction):
+    player = state.players[state.active_player]
+    score_before = player.score
+
+    instance_id = _place_coral_on_board(state, action.coral_id, action.position)
+
+    recompute_scores(state)
+    gained = player.score - score_before
     player.passed_last_turn = False
 
     _append_history(
@@ -65,12 +120,60 @@ def _apply_place_coral(state, action: PlaceCoralAction):
     )
 
 
+def _apply_place_staghorn_pair(state, action: PlaceStaghornPairAction):
+    player = state.players[state.active_player]
+    score_before = player.score
+
+    # First goes down before second, so the second may be stacked on it.
+    first_id = _place_coral_on_board(state, STAGHORN_ID, action.first_position)
+    second_id = _place_coral_on_board(state, STAGHORN_ID, action.second_position)
+
+    player.resources[ResourceType.PLANKTON] -= STAGHORN_PAIR_PLANKTON_SURCHARGE
+    player.spent_resources[ResourceType.PLANKTON] = (
+        player.spent_resources.get(ResourceType.PLANKTON, 0) + STAGHORN_PAIR_PLANKTON_SURCHARGE
+    )
+
+    recompute_scores(state)
+    gained = player.score - score_before
+    player.passed_last_turn = False
+
+    _append_history(
+        state,
+        action,
+        {
+            "placed_instance_id": [first_id, second_id],
+            "points_gained": gained,
+            "positions": [action.first_position, action.second_position],
+            "coral_id": STAGHORN_ID,
+            "bonus_plankton_paid": STAGHORN_PAIR_PLANKTON_SURCHARGE,
+        },
+    )
+
+
 def _advance_turn(state):
     state.turn += 1
     state.active_player = PlayerId.P1 if state.active_player == PlayerId.P2 else PlayerId.P2
     if state.active_player == PlayerId.P1:
         state.round += 1
         _resolve_climate_round(state)
+        _resolve_production_round(state)
+
+
+def _resolve_production_round(state):
+    gains = resolve_production(state)
+    _append_history(
+        state,
+        None,
+        {
+            "result": "production",
+            "round": state.round,
+            "production": {
+                player_id.value: {resource.value: amount for resource, amount in resources.items()}
+                for player_id, resources in gains.items()
+            },
+        },
+        action_type="production_tick",
+    )
 
 
 def _resolve_climate_round(state):
@@ -136,14 +239,18 @@ def _threshold_reached(state, thresholds: dict) -> bool:
     )
 
 
-def _append_history(state, action, payload):
+def _append_history(state, action, payload, action_type=None):
+    if action_type is None:
+        action_type = (
+            action.action_type.value
+            if hasattr(action, "action_type")
+            else "climate_tick"
+        )
     state.action_history.append(
         {
             "turn": state.turn,
             "player": state.active_player.value,
-            "action_type": getattr(action, "action_type", ActionType.PASS).value
-            if hasattr(action, "action_type")
-            else "climate_tick",
+            "action_type": action_type,
             **payload,
         }
     )

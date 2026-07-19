@@ -18,7 +18,9 @@ climate:
   ph_step: 0.05
   critical_temperature: 32.0
   critical_ph: 7.4
-  deck_size: 90
+  # pH desabilitado por hora (cartas com ph_steps: 0); progressão de era é por temperatura.
+  # deck_size = total de instâncias do climate.yaml: era1(17) + era2(30) + era3(30) = 77.
+  deck_size: 77
   era_thresholds:
     "2":
       temperature: 29.0

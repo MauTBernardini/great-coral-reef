@@ -18,7 +18,8 @@ def test_initial_state_has_expected_defaults(initial_state, balance_rules):
     assert initial_state.current_era == 1
     assert len(initial_state.climate_deck) == balance_rules["climate"]["deck_size"]
     assert {card.era for card in initial_state.climate_deck} == {1, 2, 3}
-    assert all(card.number_of_cards == 3 for card in initial_state.climate_deck)
+    # Copies per card vary by era in the current deck (era 1 uses 1-2, eras 2-3 use 3).
+    assert all(card.number_of_cards >= 1 for card in initial_state.climate_deck)
 
 
 def test_build_climate_deck_respects_deck_size(climate_config):

@@ -12,7 +12,7 @@ except ImportError:
 
 from ..agents.greedy_agent import GreedyAgent
 from ..agents.random_agent import RandomAgent
-from ..content.loader import load_corals, load_yaml_config
+from ..content.loader import load_corals, load_soils, load_yaml_config
 from ..engine.enums import PlayerId
 from ..engine.setup import create_initial_state, load_balance_rules, load_climate_config
 from .runner import run_game
@@ -22,6 +22,7 @@ from .runner import run_game
 class TournamentConfig:
     games: int = 100
     corals_path: str = "configs/corals.yaml"
+    soils_path: str = "configs/soils.yaml"
     balance_rules_path: str = "configs/balance_rules.yaml"
     climate_path: str = "configs/climate.yaml"
     version_path: str = "configs/version.yaml"
@@ -32,6 +33,9 @@ class TournamentConfig:
     max_rounds: int = 50
     show_progress: bool = True
     save_results: bool = True
+    # Estado turno a turno: CSV longo (metricas por jogador) + JSONL detalhado (board + mao).
+    save_turn_states: bool = True
+    save_turn_states_detail: bool = True
 
 
 AGENT_FACTORY = {
@@ -42,11 +46,14 @@ AGENT_FACTORY = {
 
 def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     corals = load_corals(config.corals_path)
+    soils = load_soils(config.soils_path)
     balance_rules = load_balance_rules(config.balance_rules_path)
     climate_config = load_climate_config(config.climate_path)
     version_config = load_yaml_config(config.version_path)
 
     rows = []
+    turn_state_rows = []
+    turn_state_snapshots = []
     for i in tqdm(
         range(config.games),
         total=config.games,
@@ -59,12 +66,21 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             coral_definitions=corals,
             balance_rules=balance_rules,
             climate_config=climate_config,
+            soil_definitions=soils,
         )
         agents = {
             PlayerId.P1: AGENT_FACTORY[config.agent_p1](seed),
             PlayerId.P2: AGENT_FACTORY[config.agent_p2](seed + 1),
         }
-        final_state, summary, _ = run_game(state, agents=agents, max_rounds=config.max_rounds)
+        final_state, summary, telemetry = run_game(
+            state, agents=agents, max_rounds=config.max_rounds
+        )
+
+        if config.save_turn_states:
+            turn_state_rows.extend(telemetry.to_rows())
+        if config.save_turn_states_detail:
+            turn_state_snapshots.extend(telemetry.states)
+
         rows.append(
             {
                 "seed": seed,
@@ -90,7 +106,13 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     df = pd.DataFrame(rows)
 
     if config.save_results:
-        artifact_dir = save_tournament_results(df=df, config=config, version_config=version_config)
+        artifact_dir = save_tournament_results(
+            df=df,
+            config=config,
+            version_config=version_config,
+            turn_state_rows=turn_state_rows,
+            turn_state_snapshots=turn_state_snapshots,
+        )
         df.attrs["artifact_dir"] = str(artifact_dir)
         df.attrs["code_version"] = version_config.get("version", {}).get("code_version")
 
@@ -114,7 +136,13 @@ def summarize_tournament(df: pd.DataFrame) -> dict:
     }
 
 
-def save_tournament_results(df: pd.DataFrame, config: TournamentConfig, version_config: dict) -> Path:
+def save_tournament_results(
+    df: pd.DataFrame,
+    config: TournamentConfig,
+    version_config: dict,
+    turn_state_rows: list | None = None,
+    turn_state_snapshots: list | None = None,
+) -> Path:
     version_block = version_config.get("version", {})
     code_version = version_block.get("code_version", "unknown")
     timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
@@ -126,15 +154,30 @@ def save_tournament_results(df: pd.DataFrame, config: TournamentConfig, version_
 
     df.to_csv(results_path, index=False)
 
+    files = {"results_csv": str(results_path)}
+
+    # Estado turno a turno (long format) para analisar a progressao por jogador.
+    if config.save_turn_states and turn_state_rows:
+        turn_states_path = artifact_dir / "turn_states.csv"
+        pd.DataFrame(turn_state_rows).to_csv(turn_states_path, index=False)
+        files["turn_states_csv"] = str(turn_states_path)
+
+    # Snapshot completo por turno (inclui board e mao de cada jogador), 1 JSON por linha.
+    if config.save_turn_states_detail and turn_state_snapshots:
+        detail_path = artifact_dir / "turn_states.jsonl"
+        with detail_path.open("w", encoding="utf-8") as handle:
+            for snapshot in turn_state_snapshots:
+                handle.write(_json_dumps_compact(snapshot))
+                handle.write("\n")
+        files["turn_states_jsonl"] = str(detail_path)
+
     summary = summarize_tournament(df)
     metadata = {
         "saved_at_utc": timestamp,
         "version": version_block,
         "tournament_config": asdict(config),
         "summary": summary,
-        "files": {
-            "results_csv": str(results_path),
-        },
+        "files": files,
     }
     metadata_path.write_text(_json_dumps(metadata), encoding="utf-8")
 
@@ -145,3 +188,9 @@ def _json_dumps(payload: dict) -> str:
     import json
 
     return json.dumps(payload, ensure_ascii=False, indent=2)
+
+
+def _json_dumps_compact(payload: dict) -> str:
+    import json
+
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))

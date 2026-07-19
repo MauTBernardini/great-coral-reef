@@ -2,12 +2,13 @@ corals:
   - coral_id: staghorn
     name: Staghorn Coral
     cost:
-      sun: 2
-      plankton: 1
+      sun: 3
     base_points: 2
     traits: [branching]
     max_height_gain: 1
     requires_support: true
+    # Apenas as duas camadas mais ao topo (não pode ser construído no fundo).
+    allowed_layers: [1, 2]
 
   - coral_id: elkhorn
     name: Elkhorn Coral
@@ -19,22 +20,13 @@ corals:
     max_height_gain: 1
     requires_support: true
 
-  - coral_id: sponge_tower
-    name: Sponge Tower
-    cost:
-      sun: 1
-      plankton: 2
-    base_points: 1
-    traits: [sponge, vertical]
-    max_height_gain: 2
-    requires_support: true
-
-  - coral_id: brain_coral
-    name: Brain Coral
+  - coral_id: grooved_brain_coral
+    name: Grooved Brain Coral
     cost:
       sun: 2
-      plankton: 2
     base_points: 3
     traits: [massive]
     max_height_gain: 1
     requires_support: true
+    # Apenas as duas primeiras camadas (fundo e a camada seguinte).
+    allowed_layers: [0, 1]

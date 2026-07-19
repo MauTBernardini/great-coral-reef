@@ -10,12 +10,24 @@ def test_cannot_place_out_of_bounds(initial_state):
         validate_action(initial_state, action)
 
 
-def test_cannot_place_without_support(initial_state):
+def test_cannot_place_without_support(soiled_state):
     action = PlaceCoralAction("staghorn", (1, 1, 1))
+    with pytest.raises(InvalidActionError):
+        validate_action(soiled_state, action)
+
+
+def test_can_place_on_ground(soiled_state):
+    action = PlaceCoralAction("grooved_brain_coral", (1, 1, 0))
+    validate_action(soiled_state, action)
+
+
+def test_staghorn_cannot_be_placed_on_bottom_layer(initial_state):
+    action = PlaceCoralAction("staghorn", (1, 1, 0))
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, action)
 
 
-def test_can_place_on_ground(initial_state):
-    action = PlaceCoralAction("staghorn", (1, 1, 0))
-    validate_action(initial_state, action)
+def test_grooved_brain_coral_cannot_be_placed_on_top_layer(initial_state):
+    action = PlaceCoralAction("grooved_brain_coral", (1, 1, 2))
+    with pytest.raises(InvalidActionError):
+        validate_action(initial_state, action)

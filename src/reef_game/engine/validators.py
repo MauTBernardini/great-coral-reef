@@ -1,6 +1,10 @@
-from .actions import PlaceCoralAction
-from .enums import ActionType
+from .actions import PlaceCoralAction, PlaceSoilAction, PlaceStaghornPairAction
+from .economy import effective_cost
+from .enums import ActionType, ResourceType
 from .state import get_cell
+
+STAGHORN_ID = "staghorn"
+STAGHORN_PAIR_PLANKTON_SURCHARGE = 1
 
 
 class InvalidActionError(Exception):
@@ -18,10 +22,54 @@ def validate_action(state, action) -> None:
         _validate_place_coral(state, action)
         return
 
+    if action.action_type == ActionType.PLACE_STAGHORN_PAIR:
+        _validate_staghorn_pair(state, action)
+        return
+
+    if action.action_type == ActionType.PLACE_SOIL:
+        _validate_place_soil(state, action)
+        return
+
     raise InvalidActionError(f"Unsupported action type: {action.action_type}")
 
 
-def _validate_place_coral(state, action: PlaceCoralAction) -> None:
+def _validate_place_soil(state, action: PlaceSoilAction) -> None:
+    player = state.players[state.active_player]
+
+    if action.soil_id not in state.available_soils:
+        raise InvalidActionError("Unknown soil_id.")
+
+    x, y, z = action.position
+    if z != 0:
+        raise InvalidActionError("Soil can only be placed on the bottom layer (z=0).")
+
+    if not (0 <= x < state.board.width and 0 <= y < state.board.height):
+        raise InvalidActionError("Position out of bounds.")
+
+    cell = get_cell(state.board, action.position)
+    if cell.soil is not None:
+        raise InvalidActionError("Cell already has a soil tile.")
+
+    if state.soil_supply.get(action.soil_id, 0) <= 0:
+        raise InvalidActionError("No soil of this type remaining in supply.")
+
+    soil = state.available_soils[action.soil_id]
+    for resource, cost_value in soil.cost.values.items():
+        if player.resources.get(resource, 0) < cost_value:
+            raise InvalidActionError(f"Insufficient resource: {resource.value}")
+
+
+def _validate_place_coral(
+    state, action: PlaceCoralAction, pending=None, check_resources=True
+) -> None:
+    """Validate a single placement.
+
+    ``pending`` maps positions to coral_ids that should be treated as already
+    occupied (used so the second staghorn of a pair can be supported by / must
+    not overlap the first). ``check_resources`` can be disabled when affordability
+    is checked jointly for a multi-placement action.
+    """
+    pending = pending or {}
     player = state.players[state.active_player]
 
     if action.coral_id not in state.available_corals:
@@ -30,18 +78,70 @@ def _validate_place_coral(state, action: PlaceCoralAction) -> None:
     coral = state.available_corals[action.coral_id]
     x, y, z = action.position
 
-    if not (0 <= x < state.board.width and 0 <= y < state.board.height and 0 <= z < state.board.max_layers):
+    in_bounds = (
+        0 <= x < state.board.width
+        and 0 <= y < state.board.height
+        and 0 <= z < state.board.max_layers
+    )
+    if not in_bounds:
         raise InvalidActionError("Position out of bounds.")
 
+    if coral.allowed_layers is not None and z not in coral.allowed_layers:
+        raise InvalidActionError(
+            f"Coral {coral.coral_id} cannot be placed on layer {z}."
+        )
+
     cell = get_cell(state.board, action.position)
-    if cell.occupant is not None:
+    if cell.occupant is not None or action.position in pending:
         raise InvalidActionError("Cell already occupied.")
 
-    for resource, cost_value in coral.cost.values.items():
-        if player.resources.get(resource, 0) < cost_value:
-            raise InvalidActionError(f"Insufficient resource: {resource.value}")
+    base_cell = get_cell(state.board, (x, y, 0))
+    if base_cell.soil is None:
+        raise InvalidActionError("Coral requires a soil tile at the column base (z=0).")
+
+    if check_resources:
+        cost = effective_cost(state, coral, action.position)
+        for resource, cost_value in cost.items():
+            if player.resources.get(resource, 0) < cost_value:
+                raise InvalidActionError(f"Insufficient resource: {resource.value}")
 
     if coral.requires_support and z > 0:
-        below = get_cell(state.board, (x, y, z - 1))
-        if below.occupant is None:
+        below_position = (x, y, z - 1)
+        below = get_cell(state.board, below_position)
+        if below.occupant is None and below_position not in pending:
             raise InvalidActionError("Coral requires support below.")
+
+
+def _validate_staghorn_pair(state, action: PlaceStaghornPairAction) -> None:
+    if action.first_position == action.second_position:
+        raise InvalidActionError("Staghorn pair positions must differ.")
+
+    player = state.players[state.active_player]
+
+    first = PlaceCoralAction(STAGHORN_ID, action.first_position)
+    second = PlaceCoralAction(STAGHORN_ID, action.second_position)
+
+    # Structural checks (bounds/layer/support/occupancy) with resources deferred to
+    # the joint affordability check below. The second staghorn may lean on the first.
+    _validate_place_coral(state, first, check_resources=False)
+    _validate_place_coral(
+        state,
+        second,
+        pending={action.first_position: STAGHORN_ID},
+        check_resources=False,
+    )
+
+    coral = state.available_corals[STAGHORN_ID]
+    combined: dict = {}
+    for position in (action.first_position, action.second_position):
+        for resource, amount in effective_cost(state, coral, position).items():
+            combined[resource] = combined.get(resource, 0) + amount
+    combined[ResourceType.PLANKTON] = (
+        combined.get(ResourceType.PLANKTON, 0) + STAGHORN_PAIR_PLANKTON_SURCHARGE
+    )
+
+    for resource, cost_value in combined.items():
+        if player.resources.get(resource, 0) < cost_value:
+            raise InvalidActionError(
+                f"Insufficient resource for staghorn pair: {resource.value}"
+            )
