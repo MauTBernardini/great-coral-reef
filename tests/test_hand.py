@@ -7,11 +7,12 @@ from reef_game.engine.transitions import apply_action
 from reef_game.engine.validators import InvalidActionError, validate_action
 
 
-def test_players_start_with_a_hand_of_coral_cards(initial_state):
+def test_players_start_with_a_hand_of_cards(initial_state):
     for pid in (PlayerId.P1, PlayerId.P2):
         assert len(initial_state.players[pid].hand) == STARTING_HAND_SIZE
-    # As cartas iniciais são corais válidos.
-    assert all(c in initial_state.available_corals for c in initial_state.players[PlayerId.P1].hand)
+    # As cartas iniciais são corais ou fauna válidos (baralho compartilhado).
+    valid = set(initial_state.available_corals) | set(initial_state.available_fauna)
+    assert all(c in valid for c in initial_state.players[PlayerId.P1].hand)
 
 
 def test_buy_corals_draws_two_cards_into_hand(initial_state):

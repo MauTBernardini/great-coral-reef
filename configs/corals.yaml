@@ -1,7 +1,7 @@
 # deck_count = quantas cópias deste coral existem no baralho fechado de corais
 # (a "disponibilidade" do coral). Compra-se cartas do baralho para a mão (teto de 10)
 # e constrói-se corais gastando a carta correspondente da mão.
-# Total do baralho: 8+6+8+4+4+6+8+6 = 50 cartas.
+# Total do baralho: 16+12+16+8+8+12+16+12 = 100 cartas (proporção ×2).
 corals:
   - coral_id: staghorn
     name: Staghorn Coral
@@ -11,7 +11,9 @@ corals:
     traits: [branching]
     requires_support: true
     allowed_layers: [1, 2]
-    deck_count: 8
+    deck_count: 16
+    o2: 1
+    habitat_capacity: 2
 
   - coral_id: elkhorn
     name: Elkhorn Coral
@@ -21,7 +23,9 @@ corals:
     base_points: 3
     traits: [branching]
     requires_support: true
-    deck_count: 6
+    deck_count: 12
+    o2: 1
+    habitat_capacity: 2
 
   - coral_id: grooved_brain_coral
     name: Grooved Brain Coral
@@ -31,7 +35,9 @@ corals:
     traits: [massive]
     requires_support: true
     allowed_layers: [0, 1]
-    deck_count: 8
+    deck_count: 16
+    o2: 1
+    habitat_capacity: 1
 
   - coral_id: fox_coral
     name: Fox Coral
@@ -45,7 +51,9 @@ corals:
     production:
       plankton: 1
     blocks_opponent_adjacent: true
-    deck_count: 4
+    deck_count: 8
+    o2: 1
+    habitat_capacity: 1
 
   - coral_id: sun_coral
     name: Sun Coral
@@ -57,7 +65,9 @@ corals:
     production:
       plankton: 1
     required_soil: dark_overhang
-    deck_count: 4
+    deck_count: 8
+    o2: 0
+    habitat_capacity: 1
 
   - coral_id: gorgonian_sea_fan
     name: Gorgonian Sea Fan
@@ -69,7 +79,9 @@ corals:
     requires_support: true
     production:
       plankton: 2
-    deck_count: 6
+    deck_count: 12
+    o2: 0
+    habitat_capacity: 2
 
   - coral_id: branched_finger_coral
     name: Branched Finger Coral
@@ -80,7 +92,9 @@ corals:
     requires_support: true
     refund_soil: rocky_reef
     refund_sun: 1
-    deck_count: 8
+    deck_count: 16
+    o2: 1
+    habitat_capacity: 1
 
   - coral_id: bubble_coral
     name: Bubble Coral
@@ -93,4 +107,6 @@ corals:
     allowed_layers: [0, 1]
     production:
       plankton: 1
-    deck_count: 6
+    deck_count: 12
+    o2: 1
+    habitat_capacity: 1

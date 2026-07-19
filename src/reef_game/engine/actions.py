@@ -54,6 +54,19 @@ class PlaceSoilAction(Action):
 
 
 @dataclass(frozen=True)
+class PlayFaunaAction(Action):
+    """Jogar uma carta de fauna da mão sobre um dos seus corais (ocupa capacidade)."""
+
+    fauna_id: str
+    position: Tuple[int, int, int]
+
+    def __init__(self, fauna_id: str, position: Tuple[int, int, int]):
+        object.__setattr__(self, "action_type", ActionType.PLAY_FAUNA)
+        object.__setattr__(self, "fauna_id", fauna_id)
+        object.__setattr__(self, "position", position)
+
+
+@dataclass(frozen=True)
 class BuyCoralsAction(Action):
     """Comprar 2 cartas de coral fechadas (sacar do baralho para a mão, teto de 10)."""
 

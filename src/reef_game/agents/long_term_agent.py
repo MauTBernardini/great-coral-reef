@@ -21,7 +21,7 @@ as the greedy — but with a value function tuned for the long game.
 from ..engine.economy import effective_cost
 from ..engine.enums import ActionType, ResourceType
 from ..engine.scoring import STAGHORN_ID as _STAGHORN_ID
-from ..engine.scoring import orthogonal_neighbors_3d, score_coral
+from ..engine.scoring import orthogonal_neighbors_3d, score_coral, score_fauna
 from .base import BaseAgent
 
 STAGHORN_ID = _STAGHORN_ID
@@ -109,6 +109,12 @@ class LongTermAgent(BaseAgent):
             stream = per_round * _rounds_left_estimate(state)
             cost = sum(soil.cost.values.values())
             return W_SOIL * stream - W_COST * cost
+
+        if action.action_type == ActionType.PLAY_FAUNA:
+            fauna = state.available_fauna[action.fauna_id]
+            points = score_fauna(state, action.fauna_id, action.position, owner)
+            cost = sum(fauna.cost.values.values())
+            return points - W_COST * cost
 
         if action.action_type == ActionType.PLACE_STAGHORN_PAIR:
             coral = state.available_corals[STAGHORN_ID]

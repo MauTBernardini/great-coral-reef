@@ -34,7 +34,7 @@ def resolve_production(state) -> dict:
     """Grant production to every player. Returns the per-player gains granted."""
     top_layer = state.board.max_layers - 1
     gains = {
-        player_id: {ResourceType.SUN: 0, ResourceType.PLANKTON: 0}
+        player_id: {ResourceType.SUN: 0, ResourceType.PLANKTON: 0, ResourceType.O2: 0}
         for player_id in state.players
     }
 
@@ -53,6 +53,9 @@ def resolve_production(state) -> dict:
         coral = state.available_corals[occupant.coral_id]
         for resource, amount in coral.production.items():
             gains[occupant.owner][resource] += amount
+        # O2 gerado pelo coral (campo separado).
+        if coral.o2:
+            gains[occupant.owner][ResourceType.O2] += coral.o2
 
         # Elkhorn ability: on the top layer, adjacent to >=2 same-owner top-layer
         # elkhorns -> +1 Sun production.

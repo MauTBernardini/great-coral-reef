@@ -80,10 +80,16 @@ def build_soil_pile(seed: int, soil_definitions: dict) -> list[str]:
     return pile
 
 
-def build_coral_deck(seed: int, coral_definitions: dict) -> list[str]:
+def build_coral_deck(
+    seed: int, coral_definitions: dict, fauna_definitions: dict | None = None
+) -> list[str]:
+    """Baralho COMPARTILHADO: coral_ids + fauna_ids, cada um repetido por deck_count."""
+    fauna_definitions = fauna_definitions or {}
     deck = []
     for coral_id, coral in coral_definitions.items():
         deck.extend([coral_id] * coral.deck_count)
+    for fauna_id, fauna in fauna_definitions.items():
+        deck.extend([fauna_id] * fauna.deck_count)
     Random(seed + 202).shuffle(deck)
     return deck
 
@@ -94,12 +100,14 @@ def create_initial_state(
     balance_rules: dict | None = None,
     climate_config: dict | None = None,
     soil_definitions: dict | None = None,
+    fauna_definitions: dict | None = None,
 ) -> GameState:
     balance_rules = balance_rules or _default_balance_rules()
     climate_config = climate_config or {"deck": []}
     soil_definitions = soil_definitions or {}
+    fauna_definitions = fauna_definitions or {}
     soil_pile = build_soil_pile(seed, soil_definitions)
-    coral_deck = build_coral_deck(seed, coral_definitions)
+    coral_deck = build_coral_deck(seed, coral_definitions, fauna_definitions)
 
     board_cfg = balance_rules["board"]
     resource_cfg = balance_rules["players"]["initial_resources"]
@@ -120,10 +128,11 @@ def create_initial_state(
         return {
             ResourceType.SUN: resource_cfg["sun"],
             ResourceType.PLANKTON: resource_cfg["plankton"],
+            ResourceType.O2: resource_cfg.get("o2", 0),
         }
 
     def zeroed():
-        return {ResourceType.SUN: 0, ResourceType.PLANKTON: 0}
+        return {ResourceType.SUN: 0, ResourceType.PLANKTON: 0, ResourceType.O2: 0}
 
     def deal_hand():
         n = min(STARTING_HAND_SIZE, len(coral_deck))
@@ -166,4 +175,5 @@ def create_initial_state(
         available_soils=soil_definitions,
         soil_pile=soil_pile,
         coral_deck=coral_deck,
+        available_fauna=fauna_definitions,
     )

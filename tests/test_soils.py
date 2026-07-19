@@ -29,20 +29,11 @@ def test_buying_soil_draws_top_of_pile_and_places_it(initial_state):
     assert s.soil_pile == initial_state.soil_pile[1:]
 
 
-def test_unaffordable_soil_loses_the_action_and_returns_to_top(initial_state):
-    initial_state.players[PlayerId.P1].resources[ResourceType.SUN] = 0  # can't afford any soil
-    top = initial_state.soil_pile[0]
-
-    s = apply_action(initial_state, PlaceSoilAction((0, 0, 0)))
-
-    # Nothing placed, nothing paid, soil still on top of the pile, turn was spent.
-    assert s.board.cells[(0, 0, 0)].soil is None
-    assert s.soil_pile[0] == top
-    assert len(s.soil_pile) == len(initial_state.soil_pile)
-    assert s.players[PlayerId.P1].resources[ResourceType.SUN] == 0
-    assert s.players[PlayerId.P1].dead_turns == 1
-    assert s.active_player == PlayerId.P2
-    assert s.action_history[-1]["result"] == "soil_purchase_lost"
+def test_unaffordable_soil_is_not_a_valid_action(initial_state):
+    # Comprar solo só é válido se puder pagar o topo da pilha.
+    initial_state.players[PlayerId.P1].resources[ResourceType.SUN] = 0
+    with pytest.raises(InvalidActionError):
+        validate_action(initial_state, PlaceSoilAction((0, 0, 0)))
 
 
 def test_soil_only_on_bottom_layer(initial_state):

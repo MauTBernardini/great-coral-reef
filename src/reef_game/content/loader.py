@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 
 from ..engine.enums import CoralTrait, ResourceType
-from ..engine.models import CoralDefinition, Cost, SoilDefinition
+from ..engine.models import CoralDefinition, Cost, FaunaDefinition, SoilDefinition
 
 
 def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
@@ -26,6 +26,8 @@ def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
             refund_soil=item.get("refund_soil"),
             refund_sun=item.get("refund_sun", 0),
             deck_count=item.get("deck_count", 0),
+            o2=item.get("o2", 0),
+            habitat_capacity=item.get("habitat_capacity", 0),
         )
         result[coral.coral_id] = coral
 
@@ -46,6 +48,25 @@ def load_soils(path: str | Path) -> dict[str, SoilDefinition]:
             supply=item.get("supply", 0),
         )
         result[soil.soil_id] = soil
+
+    return result
+
+
+def load_fauna(path: str | Path) -> dict[str, FaunaDefinition]:
+    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    result = {}
+
+    for item in data["fauna"]:
+        fauna = FaunaDefinition(
+            fauna_id=item["fauna_id"],
+            name=item["name"],
+            cost=Cost(values={ResourceType(k): v for k, v in item.get("cost", {}).items()}),
+            base_points=item.get("base_points", 0),
+            deck_count=item.get("deck_count", 0),
+            habitat_cost=item.get("habitat_cost", 1),
+            required_soil=item.get("required_soil"),
+        )
+        result[fauna.fauna_id] = fauna
 
     return result
 

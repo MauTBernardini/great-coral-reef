@@ -57,10 +57,12 @@ def test_fox_coral_blocks_opponent_from_adjacent_cell(initial_state):
 def test_sun_coral_requires_dark_overhang_and_scores_five(initial_state):
     _give(initial_state, "sun_coral")
     _soil(initial_state, (0, 0, 0), "dark_overhang")
+    initial_state.players[PlayerId.P1].resources[ResourceType.PLANKTON] = 5  # sun_coral custa 3
+    plk0 = initial_state.players[PlayerId.P1].resources[ResourceType.PLANKTON]
     s = apply_action(initial_state, PlaceCoralAction("sun_coral", (0, 0, 0)))
     p1 = s.players[PlayerId.P1]
     assert s.board.cells[(0, 0, 0)].occupant.coral_id == "sun_coral"
-    assert p1.resources[ResourceType.PLANKTON] == 7  # 10 - 3
+    assert p1.resources[ResourceType.PLANKTON] == plk0 - 3  # sun_coral = 3 Plâncton
     assert p1.score == 5
 
 

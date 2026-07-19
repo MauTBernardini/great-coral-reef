@@ -14,7 +14,7 @@ except ImportError:
 from ..agents.greedy_agent import GreedyAgent
 from ..agents.long_term_agent import LongTermAgent
 from ..agents.random_agent import RandomAgent
-from ..content.loader import load_corals, load_soils, load_yaml_config
+from ..content.loader import load_corals, load_fauna, load_soils, load_yaml_config
 from ..engine.enums import PlayerId
 from ..engine.setup import create_initial_state, load_balance_rules, load_climate_config
 from .runner import run_game
@@ -25,6 +25,7 @@ class TournamentConfig:
     games: int = 100
     corals_path: str = "configs/corals.yaml"
     soils_path: str = "configs/soils.yaml"
+    fauna_path: str = "configs/fauna.yaml"
     balance_rules_path: str = "configs/balance_rules.yaml"
     climate_path: str = "configs/climate.yaml"
     version_path: str = "configs/version.yaml"
@@ -53,6 +54,7 @@ AGENT_FACTORY = {
 def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     corals = load_corals(config.corals_path)
     soils = load_soils(config.soils_path)
+    fauna = load_fauna(config.fauna_path)
     balance_rules = load_balance_rules(config.balance_rules_path)
     climate_config = load_climate_config(config.climate_path)
     version_config = load_yaml_config(config.version_path)
@@ -77,6 +79,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             balance_rules=balance_rules,
             climate_config=climate_config,
             soil_definitions=soils,
+            fauna_definitions=fauna,
         )
         # Atribuição de agente a cada cadeira (opcionalmente trocada por seed).
         p1_agent, p2_agent = config.agent_p1, config.agent_p2
@@ -160,13 +163,14 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
 
 def _play_scored_game(content, seed, p1_name, p2_name, max_rounds):
-    corals, soils, balance_rules, climate_config = content
+    corals, soils, fauna, balance_rules, climate_config = content
     state = create_initial_state(
         seed=seed,
         coral_definitions=corals,
         balance_rules=balance_rules,
         climate_config=climate_config,
         soil_definitions=soils,
+        fauna_definitions=fauna,
     )
     agents = {
         PlayerId.P1: AGENT_FACTORY[p1_name](seed),
@@ -182,6 +186,7 @@ def run_paired_tournament(config: TournamentConfig) -> pd.DataFrame:
     content = (
         load_corals(config.corals_path),
         load_soils(config.soils_path),
+        load_fauna(config.fauna_path),
         load_balance_rules(config.balance_rules_path),
         load_climate_config(config.climate_path),
     )

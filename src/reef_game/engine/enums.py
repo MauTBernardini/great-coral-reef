@@ -4,6 +4,7 @@ from enum import Enum
 class ResourceType(str, Enum):
     SUN = "sun"
     PLANKTON = "plankton"
+    O2 = "o2"
 
 
 class PlayerId(int, Enum):
@@ -15,6 +16,7 @@ class ActionType(str, Enum):
     PLACE_CORAL = "place_coral"
     PLACE_STAGHORN_PAIR = "place_staghorn_pair"
     PLACE_SOIL = "place_soil"
+    PLAY_FAUNA = "play_fauna"
     BUY_CORALS = "buy_corals"
     PASS = "pass"
 

@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from ..engine.enums import ResourceType
 from ..engine.state import board_capacity, occupied_cells_count
 
-_RESOURCES = (ResourceType.SUN, ResourceType.PLANKTON)
+_RESOURCES = (ResourceType.SUN, ResourceType.PLANKTON, ResourceType.O2)
 
 
 def _resource_map(mapping):
@@ -11,35 +11,44 @@ def _resource_map(mapping):
 
 
 def _player_board(state, player_id):
-    """This player's corals + soil tiles on the shared board, and a per-layer count."""
+    """This player's corals + soil tiles on the shared board, per-layer count e capacidade
+    habitacional total (soma da habitat_capacity dos seus corais)."""
     corals = []
     soils = []
+    fauna = []
     by_layer = {z: 0 for z in range(state.board.max_layers)}
+    habitat_capacity = 0
     for position, cell in state.board.cells.items():
         occupant = cell.occupant
         if occupant is not None and occupant.owner == player_id:
             corals.append({"coral_id": occupant.coral_id, "position": list(position)})
             by_layer[position[2]] += 1
+            habitat_capacity += state.available_corals[occupant.coral_id].habitat_capacity
+            for fauna_id in cell.fauna:
+                fauna.append({"fauna_id": fauna_id, "position": list(position)})
         if cell.soil is not None and cell.soil.owner == player_id:
             soils.append({"soil_id": cell.soil.soil_id, "position": list(position)})
-    return corals, soils, by_layer
+    return corals, soils, fauna, by_layer, habitat_capacity
 
 
 def _player_snapshot(state, player):
-    corals, soils, by_layer = _player_board(state, player.player_id)
+    corals, soils, fauna, by_layer, habitat_capacity = _player_board(state, player.player_id)
     return {
-        "resources": _resource_map(player.resources),          # sol e plancton atuais
+        "resources": _resource_map(player.resources),          # sol, plancton e o2 atuais
         "produced": _resource_map(player.produced_resources),   # produzido acumulado
         "spent": _resource_map(player.spent_resources),         # usado acumulado
         "score": player.score,
         "placed_corals": player.placed_corals,
         "dead_turns": player.dead_turns,
-        "hand": list(player.hand),                              # mao (hoje sempre vazia)
+        "hand": list(player.hand),                              # mao (cartas de coral)
         "hand_size": len(player.hand),
         "board": corals,                                        # estado do board do player
         "corals_by_layer": by_layer,
         "soils": soils,                                         # tiles de solo do player
         "soils_count": len(soils),
+        "habitat_capacity": habitat_capacity,                  # capacidade total p/ fauna
+        "fauna": fauna,                                        # fauna jogada nos corais
+        "fauna_count": len(fauna),
     }
 
 
@@ -95,15 +104,19 @@ class GameTelemetry:
                         "player": player_id,
                         "sun": p["resources"]["sun"],
                         "plankton": p["resources"]["plankton"],
+                        "o2": p["resources"]["o2"],
                         "produced_sun": p["produced"]["sun"],
                         "produced_plankton": p["produced"]["plankton"],
+                        "produced_o2": p["produced"]["o2"],
                         "spent_sun": p["spent"]["sun"],
                         "spent_plankton": p["spent"]["plankton"],
+                        "habitat_capacity": p["habitat_capacity"],
                         "score": p["score"],
                         "placed_corals": p["placed_corals"],
                         "dead_turns": p["dead_turns"],
                         "hand_size": p["hand_size"],
                         "soils_count": p["soils_count"],
+                        "fauna_count": p["fauna_count"],
                         "corals_z0": p["corals_by_layer"].get(0, 0),
                         "corals_z1": p["corals_by_layer"].get(1, 0),
                         "corals_z2": p["corals_by_layer"].get(2, 0),

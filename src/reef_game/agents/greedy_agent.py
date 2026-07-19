@@ -1,6 +1,6 @@
 from ..engine.economy import effective_cost
 from ..engine.enums import ActionType, ResourceType
-from ..engine.scoring import score_coral
+from ..engine.scoring import score_coral, score_fauna
 from .base import BaseAgent
 
 STAGHORN_ID = "staghorn"
@@ -48,6 +48,12 @@ class GreedyAgent(BaseAgent):
             )
             cost = sum(soil.cost.values.values())
             return production_value - 0.15 * cost
+
+        if action.action_type == ActionType.PLAY_FAUNA:
+            fauna = state.available_fauna[action.fauna_id]
+            points = score_fauna(state, action.fauna_id, action.position, owner)
+            cost = sum(fauna.cost.values.values())
+            return points - 0.15 * cost
 
         if action.action_type == ActionType.PLACE_STAGHORN_PAIR:
             coral = state.available_corals[STAGHORN_ID]

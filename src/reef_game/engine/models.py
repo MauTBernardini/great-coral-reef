@@ -39,6 +39,10 @@ class CoralDefinition:
     refund_sun: int = 0
     # Quantas cópias deste coral existem no baralho fechado (disponibilidade).
     deck_count: int = 0
+    # O2 gerado por rodada na Fase de Produção (base para futura Fauna).
+    o2: int = 0
+    # Capacidade habitacional: quantas Faunas podem morar neste coral (futuro).
+    habitat_capacity: int = 0
 
 
 @dataclass(frozen=True)
@@ -52,6 +56,19 @@ class SoilDefinition:
     coral_cost_reduction: int = 0
     # Quantidade disponível no suprimento compartilhado.
     supply: int = 0
+
+
+@dataclass(frozen=True)
+class FaunaDefinition:
+    fauna_id: str
+    name: str
+    cost: Cost
+    base_points: int = 0
+    deck_count: int = 0
+    # Capacidade habitacional que ocupa no coral (Seahorse em Gorgonian = 0, tratado à parte).
+    habitat_cost: int = 1
+    # Só pode ser jogada num coral cuja base seja este solo (Mandarin: rocky_reef).
+    required_soil: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -87,6 +104,8 @@ class Cell:
     position: Coord3D
     occupant: Optional[PlacedCoral] = None
     soil: Optional[PlacedSoil] = None
+    # Fauna morando no coral desta célula (fauna_ids); dono = dono do coral.
+    fauna: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -100,6 +119,10 @@ class PlayerState:
     produced_resources: Dict[ResourceType, int] = field(default_factory=dict)
     placed_corals: int = 0
     dead_turns: int = 0
+    # Saiu da rodada atual (passou) — deixa de receber turnos até a rodada acabar.
+    passed_this_round: bool = False
+    # Já comprou do baralho de corais nesta rodada (máx. 1x/rodada).
+    bought_corals_this_round: bool = False
 
 
 @dataclass
@@ -136,5 +159,6 @@ class GameState:
     available_soils: Dict[str, SoilDefinition] = field(default_factory=dict)
     # Pilha de compra de solos: fila embaralhada de soil_ids; compra-se do topo (índice 0).
     soil_pile: List[str] = field(default_factory=list)
-    # Baralho fechado de corais: fila embaralhada de coral_ids; compra-se do topo (índice 0).
+    # Baralho fechado COMPARTILHADO: fila embaralhada de coral_ids E fauna_ids (compra do topo).
     coral_deck: List[str] = field(default_factory=list)
+    available_fauna: Dict[str, "FaunaDefinition"] = field(default_factory=dict)

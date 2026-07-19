@@ -3,7 +3,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from reef_game.engine.actions import PlaceCoralAction
-from reef_game.engine.enums import PlayerId
+from reef_game.engine.enums import PlayerId, ResourceType
 from reef_game.engine.transitions import apply_action
 from reef_game.simulation.telemetry import GameTelemetry
 from reef_game.simulation.tournament import TournamentConfig, run_tournament
@@ -12,6 +12,7 @@ from reef_game.simulation.tournament import TournamentConfig, run_tournament
 def test_snapshot_captures_full_per_player_state(soiled_state):
     # P1 com exatamente 1 carta -> após construir, a mão fica vazia (testa o consumo).
     soiled_state.players[PlayerId.P1].hand = ["grooved_brain_coral"]
+    soiled_state.players[PlayerId.P1].resources = {ResourceType.SUN: 10, ResourceType.PLANKTON: 10}
     tel = GameTelemetry()
     tel.record_state(soiled_state)
     state = apply_action(soiled_state, PlaceCoralAction("grooved_brain_coral", (0, 0, 0)))
@@ -24,7 +25,7 @@ def test_snapshot_captures_full_per_player_state(soiled_state):
     # recursos, produzido, usado
     assert p1["resources"]["sun"] == 8  # 10 - 2 do brain
     assert p1["spent"]["sun"] == 2
-    assert set(p1["produced"]) == {"sun", "plankton"}
+    assert set(p1["produced"]) == {"sun", "plankton", "o2"}
     # board do player e mao
     assert p1["board"] == [{"coral_id": "grooved_brain_coral", "position": [0, 0, 0]}]
     assert p1["corals_by_layer"][0] == 1

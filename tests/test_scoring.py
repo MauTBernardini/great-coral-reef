@@ -54,12 +54,13 @@ def test_staghorn_counts_connected_staghorns(soiled_state):
 
 
 def test_grooved_brain_discounts_coral_directly_above(soiled_state):
-    # P1 brain on the ground costs 2 Sun -> 8 left.
+    sun0 = soiled_state.players[PlayerId.P1].resources[ResourceType.SUN]
+    plk0 = soiled_state.players[PlayerId.P1].resources[ResourceType.PLANKTON]
     s = apply_action(soiled_state, PlaceCoralAction("grooved_brain_coral", (0, 0, 0)))
     s = apply_action(s, PlaceCoralAction("grooved_brain_coral", (3, 3, 0)))  # P2
     s = apply_action(s, PlaceCoralAction("elkhorn", (0, 0, 1)))  # P1 above brain
 
     p1 = s.players[PlayerId.P1]
-    # Elkhorn costs 2 Sun; -1 for sitting on the brain -> 1. 8 - 1 = 7.
-    assert p1.resources[ResourceType.SUN] == 7
-    assert p1.resources[ResourceType.PLANKTON] == 9
+    # brain = 2 Sun; elkhorn = 2 Sun - 1 (desconto do brain) = 1. Total -3 Sun, -1 Plâncton.
+    assert p1.resources[ResourceType.SUN] == sun0 - 3
+    assert p1.resources[ResourceType.PLANKTON] == plk0 - 1

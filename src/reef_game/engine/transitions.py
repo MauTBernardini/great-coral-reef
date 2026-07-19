@@ -5,6 +5,7 @@ from .actions import (
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
+    PlayFaunaAction,
 )
 from .economy import effective_cost
 from .enums import ActionType, PlayerId, ResourceType
@@ -25,6 +26,7 @@ def apply_action(state, action, max_rounds: int | None = None):
     if action.action_type == ActionType.PASS:
         player = next_state.players[next_state.active_player]
         player.passed_last_turn = True
+        player.passed_this_round = True  # sai da rodada
         player.dead_turns += 1
         _append_history(next_state, action, {"result": "pass"})
         _advance_turn(next_state)
@@ -49,6 +51,12 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
+    if action.action_type == ActionType.PLAY_FAUNA:
+        _apply_play_fauna(next_state, action)
+        _advance_turn(next_state)
+        check_game_end(next_state, max_rounds=max_rounds)
+        return next_state
+
     if action.action_type == ActionType.BUY_CORALS:
         _apply_buy_corals(next_state, action)
         _advance_turn(next_state)
@@ -58,27 +66,39 @@ def apply_action(state, action, max_rounds: int | None = None):
     raise ValueError("Unsupported action type.")
 
 
+def _apply_play_fauna(state, action: PlayFaunaAction):
+    player = state.players[state.active_player]
+    fauna = state.available_fauna[action.fauna_id]
+    cell = state.board.cells[action.position]
+
+    player.hand.remove(action.fauna_id)  # gasta a carta
+    cell.fauna.append(action.fauna_id)
+
+    for resource, amount in fauna.cost.values.items():
+        player.resources[resource] -= amount
+        player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
+
+    score_before = player.score
+    recompute_scores(state)
+    gained = player.score - score_before
+    player.passed_last_turn = False
+    _append_history(
+        state,
+        action,
+        {
+            "result": "play_fauna",
+            "fauna_id": action.fauna_id,
+            "position": action.position,
+            "points_gained": gained,
+        },
+    )
+
+
 def _apply_place_soil(state, action: PlaceSoilAction):
+    # Afordabilidade é garantida na validação (só é ação válida se puder pagar).
     player = state.players[state.active_player]
     soil_id = state.soil_pile[0]  # topo da pilha (não se escolhe o tipo)
     soil = state.available_soils[soil_id]
-    sun_cost = soil.cost.values.get(ResourceType.SUN, 0)
-
-    if player.resources.get(ResourceType.SUN, 0) < sun_cost:
-        # Ação perdida: o solo volta ao topo da pilha (nada é pago nem colocado).
-        player.dead_turns += 1
-        player.passed_last_turn = False
-        _append_history(
-            state,
-            action,
-            {
-                "soil_id": soil_id,
-                "position": action.position,
-                "result": "soil_purchase_lost",
-                "reason": "insufficient_sun",
-            },
-        )
-        return
 
     state.soil_pile.pop(0)
     state.board.cells[action.position].soil = PlacedSoil(
@@ -112,6 +132,7 @@ def _apply_buy_corals(state, action: BuyCoralsAction):
         bought.append(state.coral_deck.pop(0))
     player.hand.extend(bought)
 
+    player.bought_corals_this_round = True  # só 1 compra por rodada
     player.passed_last_turn = False
     _append_history(
         state,
@@ -216,12 +237,29 @@ def _apply_place_staghorn_pair(state, action: PlaceStaghornPairAction):
 
 
 def _advance_turn(state):
+    """Rodada com N turnos: alterna, mas pula quem já passou. Quando ambos passaram,
+    inicia a próxima rodada (produção + clima)."""
     state.turn += 1
-    state.active_player = PlayerId.P1 if state.active_player == PlayerId.P2 else PlayerId.P2
-    if state.active_player == PlayerId.P1:
-        state.round += 1
-        _resolve_climate_round(state)
-        _resolve_production_round(state)
+    current = state.active_player
+    other = PlayerId.P1 if current == PlayerId.P2 else PlayerId.P2
+
+    if not state.players[other].passed_this_round:
+        state.active_player = other
+    elif not state.players[current].passed_this_round:
+        state.active_player = current  # oponente saiu; segue jogando sozinho
+    else:
+        _start_new_round(state)
+
+
+def _start_new_round(state):
+    state.round += 1
+    for player in state.players.values():
+        player.passed_this_round = False
+        player.bought_corals_this_round = False
+    state.active_player = PlayerId.P1
+    # Cada rodada inicia com a produção e um evento climático.
+    _resolve_production_round(state)
+    _resolve_climate_round(state)
 
 
 def _resolve_production_round(state):

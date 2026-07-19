@@ -9,13 +9,14 @@ def test_same_seed_and_agents_produce_same_summary(initial_state):
 
     _, summary_a, _ = run_game(initial_state, agents=agents_a, max_rounds=20)
 
-    from reef_game.content.loader import load_corals, load_soils
+    from reef_game.content.loader import load_corals, load_fauna, load_soils
     from reef_game.engine.setup import create_initial_state, load_balance_rules, load_climate_config
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
     coral_defs = load_corals(root / "configs" / "corals.yaml")
     soil_defs = load_soils(root / "configs" / "soils.yaml")
+    fauna_defs = load_fauna(root / "configs" / "fauna.yaml")
     balance_rules = load_balance_rules(root / "configs" / "balance_rules.yaml")
     climate_config = load_climate_config(root / "configs" / "climate.yaml")
     fresh_state = create_initial_state(
@@ -24,6 +25,7 @@ def test_same_seed_and_agents_produce_same_summary(initial_state):
         balance_rules=balance_rules,
         climate_config=climate_config,
         soil_definitions=soil_defs,
+        fauna_definitions=fauna_defs,
     )
     _, summary_b, _ = run_game(fresh_state, agents=agents_b, max_rounds=20)
 

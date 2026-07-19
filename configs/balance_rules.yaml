@@ -5,8 +5,8 @@ board:
 
 players:
   initial_resources:
-    sun: 10
-    plankton: 10
+    sun: 3
+    plankton: 2
 
 game:
   max_rounds: 50

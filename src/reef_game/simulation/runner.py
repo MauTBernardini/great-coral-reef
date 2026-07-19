@@ -4,6 +4,7 @@ from ..engine.actions import (
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
+    PlayFaunaAction,
 )
 from ..engine.transitions import apply_action
 from ..engine.validators import InvalidActionError, validate_action
@@ -39,6 +40,8 @@ def enumerate_legal_actions(state):
 
     # Só corais que estão na mão do jogador podem ser construídos.
     for coral_id in set(hand):
+        if coral_id not in state.available_corals:
+            continue
         for pos, cell in state.board.cells.items():
             if cell.occupant is None:
                 action = PlaceCoralAction(coral_id=coral_id, position=pos)
@@ -49,6 +52,23 @@ def enumerate_legal_actions(state):
                         legal_staghorn_positions.append(pos)
                 except InvalidActionError:
                     pass
+
+    # Jogar fauna da mão sobre um coral seu com capacidade livre.
+    active = state.active_player
+    own_coral_positions = [
+        pos for pos, cell in state.board.cells.items()
+        if cell.occupant is not None and cell.occupant.owner == active
+    ]
+    for fauna_id in set(hand):
+        if fauna_id not in state.available_fauna:
+            continue
+        for pos in own_coral_positions:
+            action = PlayFaunaAction(fauna_id=fauna_id, position=pos)
+            try:
+                validate_action(state, action)
+                actions.append(action)
+            except InvalidActionError:
+                pass
 
     # Staghorn ability: pair placements over independently-legal staghorn spots.
     # (Pairs where the second staghorn stacks directly on the first are supported

@@ -147,12 +147,69 @@ def score_coral(state, placed_coral) -> int:
     return points
 
 
+CLOWNFISH_ID = "clownfish"
+DAMSELFISH_ID = "damselfish"
+MANDARIN_ID = "mandarin_dragonet"
+SEAHORSE_ID = "seahorse"
+PARROTFISH_ID = "parrotfish"
+SANDY_BED_ID = "sandy_bed"
+SEAGRASS_ID = "seagrass_meadow"
+
+
+def fauna_habitat_cost(state, fauna_id, coral_id) -> int:
+    """Capacidade que a fauna ocupa no coral. Seahorse em Gorgonian ocupa 0."""
+    if fauna_id == SEAHORSE_ID and coral_id == GORGONIAN_ID:
+        return 0
+    return state.available_fauna[fauna_id].habitat_cost
+
+
+def occupied_habitat(state, cell) -> int:
+    if cell.occupant is None:
+        return 0
+    coral_id = cell.occupant.coral_id
+    return sum(fauna_habitat_cost(state, fauna_id, coral_id) for fauna_id in cell.fauna)
+
+
+def _count_owned_soil(state, owner, soil_id) -> int:
+    return sum(
+        1
+        for cell in state.board.cells.values()
+        if cell.soil is not None and cell.soil.owner == owner and cell.soil.soil_id == soil_id
+    )
+
+
+def _count_adjacent_seagrass(state, position) -> int:
+    x, y, _ = position
+    count = 0
+    for neighbor in [(x + 1, y, 0), (x - 1, y, 0), (x, y + 1, 0), (x, y - 1, 0)]:
+        cell = state.board.cells.get(neighbor)
+        if cell is not None and cell.soil is not None and cell.soil.soil_id == SEAGRASS_ID:
+            count += 1
+    return count
+
+
+def score_fauna(state, fauna_id, position, owner) -> int:
+    if fauna_id == CLOWNFISH_ID:
+        return 2
+    if fauna_id == DAMSELFISH_ID:
+        return 1
+    if fauna_id == MANDARIN_ID:
+        return 5
+    if fauna_id == SEAHORSE_ID:
+        return _count_adjacent_seagrass(state, position)
+    if fauna_id == PARROTFISH_ID:
+        return 1 + _count_owned_soil(state, owner, SANDY_BED_ID)
+    return state.available_fauna[fauna_id].base_points
+
+
 def compute_player_score(state, player_id) -> int:
     total = 0
     for cell in state.board.cells.values():
         occupant = cell.occupant
         if occupant is not None and occupant.owner == player_id:
             total += score_coral(state, occupant)
+            for fauna_id in cell.fauna:
+                total += score_fauna(state, fauna_id, cell.position, player_id)
     return total
 
 

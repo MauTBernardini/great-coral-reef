@@ -3,11 +3,12 @@ from .actions import (
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
+    PlayFaunaAction,
 )
 from .economy import effective_cost
 from .enums import ActionType, ResourceType
 from .models import MAX_HAND_SIZE
-from .scoring import same_layer_neighbors
+from .scoring import fauna_habitat_cost, occupied_habitat, same_layer_neighbors
 from .state import get_cell
 
 STAGHORN_ID = "staghorn"
@@ -37,6 +38,10 @@ def validate_action(state, action) -> None:
         _validate_place_soil(state, action)
         return
 
+    if action.action_type == ActionType.PLAY_FAUNA:
+        _validate_play_fauna(state, action)
+        return
+
     if action.action_type == ActionType.BUY_CORALS:
         _validate_buy_corals(state, action)
         return
@@ -44,9 +49,47 @@ def validate_action(state, action) -> None:
     raise InvalidActionError(f"Unsupported action type: {action.action_type}")
 
 
+def _validate_play_fauna(state, action: PlayFaunaAction) -> None:
+    player = state.players[state.active_player]
+
+    if action.fauna_id not in state.available_fauna:
+        raise InvalidActionError("Unknown fauna_id.")
+    if action.fauna_id not in player.hand:
+        raise InvalidActionError(f"Fauna card {action.fauna_id} is not in hand.")
+
+    x, y, z = action.position
+    in_bounds = (
+        0 <= x < state.board.width
+        and 0 <= y < state.board.height
+        and 0 <= z < state.board.max_layers
+    )
+    if not in_bounds:
+        raise InvalidActionError("Position out of bounds.")
+
+    cell = get_cell(state.board, action.position)
+    coral = cell.occupant
+    if coral is None:
+        raise InvalidActionError("Fauna must be played on a coral.")
+    if coral.owner != state.active_player:
+        raise InvalidActionError("Fauna must be played on your own coral.")
+
+    fauna = state.available_fauna[action.fauna_id]
+    if fauna.required_soil is not None:
+        base = get_cell(state.board, (x, y, 0))
+        if base.soil is None or base.soil.soil_id != fauna.required_soil:
+            raise InvalidActionError(f"Fauna requires a {fauna.required_soil} column.")
+
+    coral_def = state.available_corals[coral.coral_id]
+    free = coral_def.habitat_capacity - occupied_habitat(state, cell)
+    if free < fauna_habitat_cost(state, action.fauna_id, coral.coral_id):
+        raise InvalidActionError("Not enough habitat capacity on the coral.")
+
+    for resource, amount in fauna.cost.values.items():
+        if player.resources.get(resource, 0) < amount:
+            raise InvalidActionError(f"Insufficient resource: {resource.value}")
+
+
 def _validate_place_soil(state, action: PlaceSoilAction) -> None:
-    # Afordabilidade NÃO é validada aqui de propósito: se o topo da pilha for caro
-    # demais, a ação é permitida mas perdida (tratada em transitions).
     if not state.soil_pile:
         raise InvalidActionError("Soil purchase pile is empty.")
 
@@ -61,12 +104,22 @@ def _validate_place_soil(state, action: PlaceSoilAction) -> None:
     if cell.soil is not None:
         raise InvalidActionError("Cell already has a soil tile.")
 
+    # Só é ação válida se o jogador puder pagar o solo do topo da pilha.
+    player = state.players[state.active_player]
+    soil = state.available_soils[state.soil_pile[0]]
+    sun_cost = soil.cost.values.get(ResourceType.SUN, 0)
+    if player.resources.get(ResourceType.SUN, 0) < sun_cost:
+        raise InvalidActionError("Cannot afford the soil on top of the pile.")
+
 
 def _validate_buy_corals(state, action: BuyCoralsAction) -> None:
     player = state.players[state.active_player]
 
     if not state.coral_deck:
         raise InvalidActionError("Coral deck is empty.")
+
+    if player.bought_corals_this_round:
+        raise InvalidActionError("Already bought corals this round (max 1/round).")
 
     if len(player.hand) >= MAX_HAND_SIZE:
         raise InvalidActionError("Hand is full (max 10 cards).")

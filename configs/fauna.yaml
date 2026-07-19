@@ -1,0 +1,44 @@
+# Cartas de fauna. Compartilham o baralho e a mão com os corais.
+# Jogadas sobre um coral seu, ocupando capacidade habitacional (habitat_cost).
+# deck_count = disponibilidade: quanto mais caro (Sol+Plâncton), mais raro; Parrotfish o mais raro.
+# Habilidades dormentes (dependem de conteúdo futuro):
+#   - Clownfish: "anemona" não existe ainda -> jogada grátis/produção extra não disparam.
+#   - Mandarin Dragonet: "imune a predadores" -> sem efeito até existirem predadores.
+fauna:
+  - fauna_id: clownfish
+    name: Clownfish
+    cost:
+      plankton: 1
+    deck_count: 6
+    # Scoring: 2 fixo. Habilidade da anêmona dormente.
+
+  - fauna_id: damselfish
+    name: Damselfish
+    cost:
+      sun: 1
+    deck_count: 6
+    # Scoring: 1 fixo.
+
+  - fauna_id: seahorse
+    name: Seahorse
+    cost:
+      plankton: 1
+    deck_count: 6
+    # Não ocupa capacidade se o coral for Gorgonian Sea Fan (tratado no habitat_cost).
+    # Scoring: 1 por Seagrass Meadow adjacente.
+
+  - fauna_id: mandarin_dragonet
+    name: Mandarin Dragonet
+    cost:
+      plankton: 2
+    deck_count: 4
+    # Só pode ser jogado num coral em coluna Rocky Reef; imune a predadores (dormente).
+    required_soil: rocky_reef
+    # Scoring: 5 fixo.
+
+  - fauna_id: parrotfish
+    name: Parrotfish
+    cost:
+      sun: 2
+    deck_count: 2
+    # Scoring: 1 + 1 por Sandy Bed que você tem no board. (O mais raro.)
