@@ -11,6 +11,7 @@ except ImportError:
         return iterable
 
 from ..agents.greedy_agent import GreedyAgent
+from ..agents.long_term_agent import LongTermAgent
 from ..agents.random_agent import RandomAgent
 from ..content.loader import load_corals, load_flora, load_soils, load_yaml_config
 from ..engine.enums import PlayerId
@@ -42,6 +43,7 @@ class TournamentConfig:
 AGENT_FACTORY = {
     "random": lambda seed: RandomAgent(seed=seed),
     "greedy": lambda seed: GreedyAgent(),
+    "longterm": lambda seed: LongTermAgent(),
 }
 
 
@@ -142,6 +144,128 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
         df.attrs["code_version"] = version_config.get("version", {}).get("code_version")
 
     return df
+
+
+def _play_scored_game(content, seed, p1_name, p2_name, max_rounds):
+    corals, soils, flora, balance_rules, climate_config = content
+    state = create_initial_state(
+        seed=seed,
+        coral_definitions=corals,
+        balance_rules=balance_rules,
+        climate_config=climate_config,
+        soil_definitions=soils,
+        flora_definitions=flora,
+    )
+    agents = {
+        PlayerId.P1: AGENT_FACTORY[p1_name](seed),
+        PlayerId.P2: AGENT_FACTORY[p2_name](seed + 1),
+    }
+    _, summary, _ = run_game(state, agents=agents, max_rounds=max_rounds)
+    return summary["scores"][1], summary["scores"][2], summary["winner"]
+
+
+def run_paired_tournament(config: TournamentConfig) -> pd.DataFrame:
+    """Compara agent_p1 (A) vs agent_p2 (B) de forma justa: cada seed é jogado nas
+    DUAS ordens, cancelando a vantagem de posição."""
+    content = (
+        load_corals(config.corals_path),
+        load_soils(config.soils_path),
+        load_flora(config.flora_path),
+        load_balance_rules(config.balance_rules_path),
+        load_climate_config(config.climate_path),
+    )
+    version_config = load_yaml_config(config.version_path)
+    agent_a, agent_b = config.agent_p1, config.agent_p2
+
+    def winner_agent(winner, p1_is_a):
+        if winner is None:
+            return "draw"
+        p1_won = winner == 1
+        if p1_won:
+            return "a" if p1_is_a else "b"
+        return "b" if p1_is_a else "a"
+
+    rows = []
+    for i in tqdm(
+        range(config.games), total=config.games, desc="Paired", disable=not config.show_progress
+    ):
+        seed = config.seed_start + i
+        a1, b1, w1 = _play_scored_game(content, seed, agent_a, agent_b, config.max_rounds)
+        b2, a2, w2 = _play_scored_game(content, seed, agent_b, agent_a, config.max_rounds)
+        rows.append(
+            {
+                "seed": seed,
+                "a_as_p1_score": a1,
+                "b_as_p2_score": b1,
+                "game1_winner": winner_agent(w1, p1_is_a=True),
+                "b_as_p1_score": b2,
+                "a_as_p2_score": a2,
+                "game2_winner": winner_agent(w2, p1_is_a=False),
+                "a_total_score": a1 + a2,
+                "b_total_score": b1 + b2,
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    df.attrs["agent_a"] = agent_a
+    df.attrs["agent_b"] = agent_b
+
+    if config.save_results:
+        artifact_dir = _save_paired_results(df, config, version_config)
+        df.attrs["artifact_dir"] = str(artifact_dir)
+
+    return df
+
+
+def summarize_paired(
+    df: pd.DataFrame, agent_a: str | None = None, agent_b: str | None = None
+) -> dict:
+    agent_a = agent_a or df.attrs.get("agent_a", "A")
+    agent_b = agent_b or df.attrs.get("agent_b", "B")
+    total_games = 2 * len(df)
+
+    winners = list(df["game1_winner"]) + list(df["game2_winner"])
+    a_scores = list(df["a_as_p1_score"]) + list(df["a_as_p2_score"])
+    b_scores = list(df["b_as_p1_score"]) + list(df["b_as_p2_score"])
+    # P1 venceu quando: jogo1 -> A ('a'); jogo2 -> B ('b').
+    p1_wins = int((df["game1_winner"] == "a").sum() + (df["game2_winner"] == "b").sum())
+
+    return {
+        "agent_a": agent_a,
+        "agent_b": agent_b,
+        "paired_games": total_games,
+        "a_winrate": winners.count("a") / total_games,
+        "b_winrate": winners.count("b") / total_games,
+        "draw_rate": winners.count("draw") / total_games,
+        "a_avg_score": sum(a_scores) / total_games,
+        "b_avg_score": sum(b_scores) / total_games,
+        "seeds_a_better": float((df["a_total_score"] > df["b_total_score"]).mean()),
+        "seeds_b_better": float((df["b_total_score"] > df["a_total_score"]).mean()),
+        # Efeito de posição residual (deve continuar alto, mas agora simétrico entre A e B):
+        "residual_first_player_winrate": p1_wins / total_games,
+    }
+
+
+def _save_paired_results(df: pd.DataFrame, config: TournamentConfig, version_config: dict) -> Path:
+    version_block = version_config.get("version", {})
+    code_version = version_block.get("code_version", "unknown")
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    artifact_dir = Path(config.output_dir) / f"paired_{timestamp}_v{code_version}"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+
+    results_path = artifact_dir / "paired_results.csv"
+    df.to_csv(results_path, index=False)
+
+    metadata = {
+        "saved_at_utc": timestamp,
+        "version": version_block,
+        "mode": "paired",
+        "tournament_config": asdict(config),
+        "summary": summarize_paired(df),
+        "files": {"paired_results_csv": str(results_path)},
+    }
+    (artifact_dir / "metadata.json").write_text(_json_dumps(metadata), encoding="utf-8")
+    return artifact_dir
 
 
 def summarize_tournament(df: pd.DataFrame) -> dict:
