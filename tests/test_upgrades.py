@@ -3,9 +3,10 @@ from pathlib import Path
 import pytest
 
 from reef_game.content.loader import load_upgrades
-from reef_game.engine.actions import MoveSmallFishAction, PlayFaunaAction
+from reef_game.engine.actions import MoveSmallFishAction, PlaceCoralAction, PlayFaunaAction
+from reef_game.engine.economy import effective_cost
 from reef_game.engine.enums import PlayerId, ResourceType
-from reef_game.engine.models import PlacedCoral
+from reef_game.engine.models import PlacedCoral, PlacedSoil
 from reef_game.engine.production import resolve_production
 from reef_game.engine.scoring import (
     effective_habitat_capacity,
@@ -26,7 +27,89 @@ def _coral(state, coral_id, pos, owner=PlayerId.P1):
 def test_load_upgrades():
     assert set(UPGRADES) == {
         "safe_nursery", "saber_teeth", "slow_metabolist", "attraction_pheromones",
+        "accelerated_calcification", "mucus_filtration", "efficient_photosynthesis",
+        "generalist_diet",
     }
+
+
+# ---------------- Generalist Diet ----------------
+
+def test_generalist_diet_saves_fauna_with_sun(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))  # o2 = 1, habitat 2
+    initial_state.board.cells[(0, 0, 0)].add_fauna("damselfish", PlayerId.P1)
+    initial_state.board.cells[(0, 0, 0)].add_fauna("damselfish", PlayerId.P1)  # 2 fauna, 1 O2
+    initial_state.players[PlayerId.P1].upgrade_cards = ["generalist_diet"]
+    initial_state.players[PlayerId.P1].resources = {
+        ResourceType.SUN: 3, ResourceType.PLANKTON: 2, ResourceType.O2: 0,
+    }
+
+    resolve_production(initial_state)
+
+    # Gastou 1 Sol para cobrir o O2 faltante -> nenhuma fauna sacrificada.
+    assert initial_state.board.cells[(0, 0, 0)].fauna.count("damselfish") == 2
+    assert initial_state.players[PlayerId.P1].resources[ResourceType.SUN] == 2
+    assert initial_state.players[PlayerId.P1].used_generalist_diet_this_round is True
+
+
+def test_without_generalist_diet_fauna_is_sacrificed(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))  # o2 = 1
+    initial_state.board.cells[(0, 0, 0)].add_fauna("damselfish", PlayerId.P1)
+    initial_state.board.cells[(0, 0, 0)].add_fauna("damselfish", PlayerId.P1)  # 2 fauna, 1 O2
+    initial_state.players[PlayerId.P1].resources = {
+        ResourceType.SUN: 3, ResourceType.PLANKTON: 2, ResourceType.O2: 0,
+    }
+
+    resolve_production(initial_state)
+
+    # Sem o upgrade: 1 fauna sacrificada.
+    assert initial_state.board.cells[(0, 0, 0)].fauna.count("damselfish") == 1
+
+
+# ---------------- Accelerated Calcification ----------------
+
+def test_accelerated_calcification_discounts_hard_corals(initial_state):
+    staghorn = initial_state.available_corals["staghorn"]  # 3 Sol, hard
+    assert effective_cost(initial_state, staghorn, (0, 0, 1))[ResourceType.SUN] == 3
+    initial_state.players[PlayerId.P1].upgrade_cards = ["accelerated_calcification"]
+    assert effective_cost(initial_state, staghorn, (0, 0, 1))[ResourceType.SUN] == 2
+
+    # Branched Finger (hard, 1 Sol) não desce abaixo de 1.
+    bf = initial_state.available_corals["branched_finger_coral"]
+    assert effective_cost(initial_state, bf, (0, 0, 1))[ResourceType.SUN] == 1
+    # Gorgonian é 'soft' -> não recebe o desconto.
+    gorg = initial_state.available_corals["gorgonian_sea_fan"]  # soft, 1 Sol
+    assert effective_cost(initial_state, gorg, (0, 0, 1))[ResourceType.SUN] == 1
+
+
+# ---------------- Efficient Photosynthesis ----------------
+
+def test_efficient_photosynthesis_top_layers(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 2))            # hard, camada de topo
+    _coral(initial_state, "grooved_brain_coral", (1, 0, 0))  # hard, mas na base (z=0)
+    initial_state.players[PlayerId.P1].upgrade_cards = ["efficient_photosynthesis"]
+
+    gains = resolve_production(initial_state)
+
+    # Só o coral hard nas 2 camadas de cima rende +1 Sol.
+    assert gains[PlayerId.P1][ResourceType.SUN] == 1
+
+
+# ---------------- Mucus Filtration ----------------
+
+def test_mucus_filtration_on_enemy_adjacent_build(initial_state):
+    _coral(initial_state, "gorgonian_sea_fan", (1, 1, 0), owner=PlayerId.P2)  # soft, do P2
+    initial_state.players[PlayerId.P2].upgrade_cards = ["mucus_filtration"]
+    initial_state.board.cells[(2, 1, 0)].soil = PlacedSoil("sandy_bed", PlayerId.P1, (2, 1, 0))
+    initial_state.players[PlayerId.P1].hand.append("branched_finger_coral")
+    initial_state.players[PlayerId.P1].resources = {
+        ResourceType.SUN: 5, ResourceType.PLANKTON: 5, ResourceType.O2: 0,
+    }
+    before = initial_state.players[PlayerId.P2].resources.get(ResourceType.PLANKTON, 0)
+
+    # P1 constrói em (2,1,0), adjacente ao coral soft do P2 em (1,1,0).
+    s = apply_action(initial_state, PlaceCoralAction("branched_finger_coral", (2, 1, 0)))
+
+    assert s.players[PlayerId.P2].resources[ResourceType.PLANKTON] == before + 1
 
 
 # ---------------- Slow Metabolist ----------------

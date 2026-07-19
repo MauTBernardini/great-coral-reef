@@ -7,6 +7,8 @@ agree on what a placement actually costs.
 from .enums import ResourceType
 
 GROOVED_BRAIN_ID = "grooved_brain_coral"
+ACCELERATED_CALCIFICATION_ID = "accelerated_calcification"
+HARD_TYPE = "hard"
 
 
 def effective_cost(state, coral, position) -> dict:
@@ -20,6 +22,16 @@ def effective_cost(state, coral, position) -> dict:
     values = dict(coral.cost.values)
     x, y, z = position
     sun_reduction = 0
+
+    # Accelerated Calcification: corais 'hard' do jogador custam 1 Sol a menos (mín. 1).
+    builder = state.players.get(state.active_player)
+    if (
+        builder is not None
+        and ACCELERATED_CALCIFICATION_ID in builder.upgrade_cards
+        and HARD_TYPE in coral.types
+        and values.get(ResourceType.SUN, 0) > 0
+    ):
+        values[ResourceType.SUN] = max(1, values[ResourceType.SUN] - 1)
 
     if z > 0:
         below = state.board.cells.get((x, y, z - 1))

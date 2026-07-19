@@ -20,6 +20,7 @@ from .scoring import (
     grant_small_fish_death_bonus,
     player_small_fish,
     recompute_scores,
+    same_layer_neighbors,
     score_fauna,
 )
 from .termination import check_game_end
@@ -27,6 +28,8 @@ from .validators import validate_action
 
 STAGHORN_ID = "staghorn"
 STAGHORN_PAIR_PLANKTON_SURCHARGE = 1
+MUCUS_FILTRATION_ID = "mucus_filtration"
+SOFT_TYPE = "soft"
 
 
 def _gain_resource(player, resource, amount):
@@ -356,10 +359,24 @@ def _place_coral_on_board(state, coral_id, position) -> str:
             )
 
     player.placed_corals += 1
+    # Mucus Filtration: corais 'soft' inimigos adjacentes rendem +1 Plâncton ao dono deles.
+    _trigger_mucus_filtration(state, position, state.active_player)
     # Se este coral fechou um ciclo, forma uma pond (dono = quem colocou) e pode
     # render uma oferta de Instinto.
     maybe_form_pond(state, position, state.active_player)
     return instance_id
+
+
+def _trigger_mucus_filtration(state, position, builder):
+    for npos in same_layer_neighbors(position):
+        cell = state.board.cells.get(npos)
+        if cell is None or cell.occupant is None or cell.occupant.owner == builder:
+            continue
+        owner = cell.occupant.owner
+        coral_def = state.available_corals[cell.occupant.coral_id]
+        has_upgrade = MUCUS_FILTRATION_ID in state.players[owner].upgrade_cards
+        if SOFT_TYPE in coral_def.types and has_upgrade:
+            _gain_resource(state.players[owner], ResourceType.PLANKTON, 1)
 
 
 def _apply_place_coral(state, action: PlaceCoralAction):
@@ -437,6 +454,7 @@ def _start_new_round(state):
         player.passed_this_round = False
         player.bought_corals_this_round = False
         player.moved_fauna_this_round = False
+        player.used_generalist_diet_this_round = False
     state.active_player = PlayerId.P1
     # Cada rodada inicia com a produção e um evento climático.
     _resolve_production_round(state)

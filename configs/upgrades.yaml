@@ -26,6 +26,28 @@ upgrades:
     # Bônus grátis 1x/turno: mover 1 small fish (seu OU do inimigo) para um coral
     # adjacente. Só reposiciona (a posse do peixe não muda).
 
+  - upgrade_id: accelerated_calcification
+    name: Accelerated Calcification
+    effect: hard_coral_sun_discount
+    # Construir seus corais 'hard' custa 1 Sol a menos (mínimo de 1 Sol).
+
+  - upgrade_id: mucus_filtration
+    name: Mucus Filtration
+    effect: soft_coral_plankton_on_enemy_adjacent
+    # Quando o oponente constrói um coral adjacente a um coral 'soft' seu, você gera
+    # +1 Plâncton.
+
+  - upgrade_id: efficient_photosynthesis
+    name: Efficient Photosynthesis
+    effect: hard_coral_top_layers_sun
+    # Seus corais 'hard' nas 2 camadas de cima produzem +1 Sol na Fase de Produção.
+
+  - upgrade_id: generalist_diet
+    name: Generalist Diet
+    effect: feed_substitution_sun
+    # 1x/rodada: gastar 1 Sol para cobrir 1 "feed" (na Produção, salva 1 fauna que
+    # seria sacrificada por falta de O2). (Substituição de 1 Plâncton em custos: a fazer.)
+
   # --- PENDENTE (mecânica não existe; a alinhar) ---
   # - upgrade_id: calm_waters
   #   name: Calm Waters

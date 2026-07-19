@@ -10,6 +10,9 @@ from .scoring import _count_adjacent_seagrass, grant_small_fish_death_bonus, sco
 
 ELKHORN_ID = "elkhorn"
 DUGONG_ID = "dugong"
+EFFICIENT_PHOTOSYNTHESIS_ID = "efficient_photosynthesis"
+GENERALIST_DIET_ID = "generalist_diet"
+HARD_TYPE = "hard"
 
 
 def _sacrifice_lowest_fauna(state, owner, count):
@@ -89,12 +92,38 @@ def resolve_production(state) -> dict:
             if _adjacent_top_elkhorns(state, occupant.position, occupant.owner) >= 2:
                 gains[occupant.owner][ResourceType.SUN] += 1
 
+        # Efficient Photosynthesis (upgrade): corais 'hard' do dono nas 2 camadas de cima
+        # produzem +1 Sol.
+        coral_def = state.available_corals[occupant.coral_id]
+        if (
+            EFFICIENT_PHOTOSYNTHESIS_ID in state.players[occupant.owner].upgrade_cards
+            and HARD_TYPE in coral_def.types
+            and occupant.position[2] >= state.board.max_layers - 2
+        ):
+            gains[occupant.owner][ResourceType.SUN] += 1
+
     # Consumo de O2: cada fauna consome 1. Se há mais fauna que produção de O2,
     # sacrifica-se fauna (menor pontuação primeiro) até o net de O2 ficar >= 0.
     sacrifices = {}
     for player_id in state.players:
         o2_produced = gains[player_id][ResourceType.O2]
         n_fauna = fauna_count[player_id]
+        player = state.players[player_id]
+
+        # Generalist Diet: 1x/rodada, gasta 1 Sol para cobrir 1 O2 e evitar 1 sacrifício.
+        if (
+            n_fauna > o2_produced
+            and GENERALIST_DIET_ID in player.upgrade_cards
+            and not player.used_generalist_diet_this_round
+            and player.resources.get(ResourceType.SUN, 0) >= 1
+        ):
+            player.resources[ResourceType.SUN] -= 1
+            player.spent_resources[ResourceType.SUN] = (
+                player.spent_resources.get(ResourceType.SUN, 0) + 1
+            )
+            o2_produced += 1
+            player.used_generalist_diet_this_round = True
+
         if n_fauna > o2_produced:
             killed = _sacrifice_lowest_fauna(state, player_id, n_fauna - o2_produced)
             sacrifices[player_id] = killed

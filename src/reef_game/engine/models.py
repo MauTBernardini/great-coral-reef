@@ -201,6 +201,8 @@ class PlayerState:
     moved_fauna_this_round: bool = False
     # Já usou o bônus grátis de mover small fish neste turno (Attraction Pheromones).
     moved_small_fish_this_turn: bool = False
+    # Já usou a substituição de "feed" por Sol nesta rodada (Generalist Diet).
+    used_generalist_diet_this_round: bool = False
     # Tiles (posições 3D) já visitados por Moon Jellies deste jogador — pontuam por exploração.
     moon_jelly_visited: Set[Coord3D] = field(default_factory=set)
     # Cartas de Instinto que o jogador possui (inicial + extras de ponds; pontuam no fim).
