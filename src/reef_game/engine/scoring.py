@@ -301,15 +301,15 @@ def _instinct_corals_on_edge(state, owner) -> int:
     return count
 
 
-def _instinct_bottom_layer_connected_quads(state, owner) -> int:
-    """Grupos completos de 4 corais do jogador conectados (ortogonal) na camada z=0."""
+def _instinct_bottom_layer_connected_trios(state, owner) -> int:
+    """Grupos completos de 3 corais do jogador conectados (ortogonal) na camada z=0."""
     nodes = {
         (x, y)
         for (x, y, z), cell in state.board.cells.items()
         if z == 0 and cell.occupant is not None and cell.occupant.owner == owner
     }
     seen = set()
-    quads = 0
+    trios = 0
     for start in nodes:
         if start in seen:
             continue
@@ -324,8 +324,8 @@ def _instinct_bottom_layer_connected_quads(state, owner) -> int:
                 if (nx, ny) in nodes and (nx, ny) not in seen:
                     seen.add((nx, ny))
                     stack.append((nx, ny))
-        quads += size // 4
-    return quads
+        trios += size // 3
+    return trios
 
 
 def _instinct_full_habitat_corals(state, owner) -> int:
@@ -343,7 +343,7 @@ _INSTINCT_RULES = {
     "dominant_coral_type": _instinct_dominant_coral_type,
     "symbiosis_pairs": _instinct_symbiosis_pairs,
     "corals_on_edge": _instinct_corals_on_edge,
-    "bottom_layer_connected_quads": _instinct_bottom_layer_connected_quads,
+    "bottom_layer_connected_trios": _instinct_bottom_layer_connected_trios,
     "full_habitat_corals": _instinct_full_habitat_corals,
 }
 

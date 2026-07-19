@@ -57,18 +57,13 @@ def test_dominance_of_species(initial_state):
     _coral(initial_state, "staghorn", (2, 0, 0))
     _coral(initial_state, "elkhorn", (3, 0, 0))
     _with_instinct(initial_state, "dominance_of_species")
-    # tipo dominante = staghorn (3 tiles) -> 1 ponto cada
-    assert score_instinct(initial_state, PlayerId.P1) == 3
+    # tipo dominante = staghorn (3 tiles) -> 2 pontos cada
+    assert score_instinct(initial_state, PlayerId.P1) == 3 * 2
 
 
-def test_total_symbiosis(initial_state):
-    _coral(initial_state, "staghorn", (0, 0, 0))
-    initial_state.board.cells[(0, 0, 0)].fauna = ["damselfish", "clownfish"]
-    _coral(initial_state, "grooved_brain_coral", (1, 0, 0))
-    initial_state.board.cells[(1, 0, 0)].fauna = ["seahorse"]
-    _with_instinct(initial_state, "total_symbiosis")
-    # 3 pares coral<->fauna ativados -> 3 pontos cada
-    assert score_instinct(initial_state, PlayerId.P1) == 3 * 3
+def test_total_symbiosis_is_disabled():
+    # Desativada por ora: não deve ser oferecida no baralho.
+    assert "total_symbiosis" not in INSTINCTS
 
 
 def test_outer_wall(initial_state):
@@ -81,16 +76,15 @@ def test_outer_wall(initial_state):
 
 
 def test_tunnel_engineer(initial_state):
-    # 4 corais conectados em linha na camada do fundo = 1 grupo -> 3 pontos.
-    for x in range(4):
+    # 3 corais conectados em linha na camada do fundo = 1 grupo -> 3 pontos.
+    for x in range(3):
         _coral(initial_state, "staghorn", (x, 0, 0))
     _with_instinct(initial_state, "tunnel_engineer")
     assert score_instinct(initial_state, PlayerId.P1) == 3
 
-    # Só 3 conectados -> nenhum grupo completo.
-    s2 = initial_state
-    s2.board.cells[(3, 0, 0)].occupant = None
-    assert score_instinct(s2, PlayerId.P1) == 0
+    # Só 2 conectados -> nenhum grupo completo de 3.
+    initial_state.board.cells[(2, 0, 0)].occupant = None
+    assert score_instinct(initial_state, PlayerId.P1) == 0
 
 
 def test_overcrowded_nursery(initial_state):
@@ -99,7 +93,7 @@ def test_overcrowded_nursery(initial_state):
     initial_state.board.cells[(0, 0, 0)].fauna = ["damselfish"] * gb_cap  # 100% cheio
     _coral(initial_state, "staghorn", (1, 0, 0))  # tem capacidade mas vazio -> não conta
     _with_instinct(initial_state, "overcrowded_nursery")
-    assert score_instinct(initial_state, PlayerId.P1) == 3
+    assert score_instinct(initial_state, PlayerId.P1) == 2
 
 
 def test_instinct_adds_to_player_score(initial_state):
