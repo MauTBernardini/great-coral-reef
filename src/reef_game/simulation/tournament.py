@@ -102,6 +102,18 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
                 "p2_efficiency": summary["efficiency_player_2"],
                 "p1_dead_turns": summary["dead_turns"][1],
                 "p2_dead_turns": summary["dead_turns"][2],
+                "p1_produced_sun": summary["produced_resources"][1]["sun"],
+                "p2_produced_sun": summary["produced_resources"][2]["sun"],
+                "p1_produced_plankton": summary["produced_resources"][1]["plankton"],
+                "p2_produced_plankton": summary["produced_resources"][2]["plankton"],
+                "p1_soils": summary["soils_on_board"][1],
+                "p2_soils": summary["soils_on_board"][2],
+                "p1_soil_lost": summary["soil_purchases_lost"][1],
+                "p2_soil_lost": summary["soil_purchases_lost"][2],
+                "p1_hand": summary["hand_size"][1],
+                "p2_hand": summary["hand_size"][2],
+                "soil_pile_remaining": summary["soil_pile_remaining"],
+                "flora_deck_remaining": summary["flora_deck_remaining"],
                 "terminal": final_state.is_terminal,
             }
         )
@@ -136,6 +148,13 @@ def summarize_tournament(df: pd.DataFrame) -> dict:
         "avg_p1_score": float(df["p1_score"].mean()),
         "avg_p2_score": float(df["p2_score"].mean()),
         "avg_board_occupancy": float(df["board_occupancy"].mean()),
+        "avg_soils_per_player": float((df["p1_soils"] + df["p2_soils"]).mean() / 2),
+        "avg_soil_lost_per_player": float((df["p1_soil_lost"] + df["p2_soil_lost"]).mean() / 2),
+        "avg_produced_sun_per_player": float(
+            (df["p1_produced_sun"] + df["p2_produced_sun"]).mean() / 2
+        ),
+        "avg_hand_per_player": float((df["p1_hand"] + df["p2_hand"]).mean() / 2),
+        "avg_flora_deck_remaining": float(df["flora_deck_remaining"].mean()),
     }
 
 

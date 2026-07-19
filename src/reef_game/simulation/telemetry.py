@@ -90,6 +90,8 @@ class GameTelemetry:
                         "remaining_climate_cards": snap["remaining_climate_cards"],
                         "consumed_climate_cards": snap["consumed_climate_cards"],
                         "occupancy_ratio": snap["occupancy_ratio"],
+                        "soil_pile_remaining": snap["soil_pile_remaining"],
+                        "flora_deck_remaining": snap["flora_deck_remaining"],
                         "player": player_id,
                         "sun": p["resources"]["sun"],
                         "plankton": p["resources"]["plankton"],

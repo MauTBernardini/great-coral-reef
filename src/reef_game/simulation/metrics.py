@@ -3,8 +3,26 @@ import statistics
 from ..engine.state import board_capacity, occupied_cells_count
 
 
+def _soils_on_board(state):
+    counts = {pid.value: 0 for pid in state.players}
+    for cell in state.board.cells.values():
+        if cell.soil is not None:
+            counts[cell.soil.owner.value] += 1
+    return counts
+
+
+def _soil_purchases_lost(state):
+    counts = {pid.value: 0 for pid in state.players}
+    for event in state.action_history:
+        if event.get("result") == "soil_purchase_lost":
+            counts[event["player"]] += 1
+    return counts
+
+
 def summarize_game(state, telemetry):
     players = state.players
+    soils_on_board = _soils_on_board(state)
+    soil_lost = _soil_purchases_lost(state)
     summary = {
         "winner": state.winner.value if state.winner else None,
         "turns": state.turn,
@@ -23,6 +41,15 @@ def summarize_game(state, telemetry):
             pid.value: {k.value: v for k, v in p.spent_resources.items()}
             for pid, p in players.items()
         },
+        "produced_resources": {
+            pid.value: {k.value: v for k, v in p.produced_resources.items()}
+            for pid, p in players.items()
+        },
+        "hand_size": {pid.value: len(p.hand) for pid, p in players.items()},
+        "soils_on_board": soils_on_board,
+        "soil_purchases_lost": soil_lost,
+        "soil_pile_remaining": len(state.soil_pile),
+        "flora_deck_remaining": len(state.flora_deck),
         "action_history_length": len(state.action_history),
     }
 
