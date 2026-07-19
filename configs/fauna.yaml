@@ -42,3 +42,37 @@ fauna:
       sun: 2
     deck_count: 2
     # Scoring: 1 + 1 por Sandy Bed que você tem no board. (O mais raro.)
+
+  - fauna_id: cyclothone
+    name: Cyclothone
+    cost: {}
+    base_points: 1
+    deck_count: 8
+    # O vertebrado mais abundante: ao ser jogada, saca 1 carta imediatamente.
+    on_play_draw: 1
+
+  - fauna_id: lanternfish
+    name: Lanternfish
+    cost:
+      plankton: 1
+    base_points: 1
+    deck_count: 6
+    # Produz +1 Sol na Fase de Produção.
+    production:
+      sun: 1
+
+  - fauna_id: hatchetfish
+    name: Hatchetfish
+    cost:
+      plankton: 2
+    base_points: 4
+    deck_count: 4
+
+  - fauna_id: leafy_seadragon
+    name: Leafy Seadragon
+    cost:
+      plankton: 3
+    base_points: 4
+    deck_count: 2
+    # Enquanto no board, cada "explore" (compra de cartas) saca +1.
+    explore_bonus: 1

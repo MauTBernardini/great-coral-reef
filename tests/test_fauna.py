@@ -1,8 +1,9 @@
 import pytest
 
-from reef_game.engine.actions import PlayFaunaAction
+from reef_game.engine.actions import BuyCoralsAction, PlayFaunaAction
 from reef_game.engine.enums import PlayerId, ResourceType
 from reef_game.engine.models import PlacedCoral, PlacedSoil
+from reef_game.engine.production import resolve_production
 from reef_game.engine.scoring import occupied_habitat
 from reef_game.engine.transitions import apply_action
 from reef_game.engine.validators import InvalidActionError, validate_action
@@ -84,6 +85,50 @@ def test_parrotfish_scores_one_plus_sandy_beds(initial_state):
 
     # staghorn(1) + parrotfish(1 + 2 sandy) = 4
     assert s.players[PlayerId.P1].score == 4
+
+
+def test_cyclothone_draws_a_card_on_play(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    initial_state.players[PlayerId.P1].hand = ["cyclothone"]  # custo 0
+    deck0 = len(initial_state.coral_deck)
+
+    s = apply_action(initial_state, PlayFaunaAction("cyclothone", (0, 0, 0)))
+
+    assert "cyclothone" in s.board.cells[(0, 0, 0)].fauna
+    assert len(s.coral_deck) == deck0 - 1  # sacou 1 imediatamente
+    assert len(s.players[PlayerId.P1].hand) == 1  # jogou 1, sacou 1
+
+
+def test_lanternfish_produces_sun(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))  # o2 1, não produz Sol
+    initial_state.board.cells[(0, 0, 0)].fauna = ["lanternfish"]  # +1 Sol, consome 1 O2
+
+    gains = resolve_production(initial_state)
+
+    assert gains[PlayerId.P1][ResourceType.SUN] == 1
+    assert gains[PlayerId.P1][ResourceType.O2] == 0  # 1 O2 - 1 fauna
+
+
+def test_leafy_seadragon_draws_extra_on_buy(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    initial_state.board.cells[(0, 0, 0)].fauna = ["leafy_seadragon"]
+    initial_state.players[PlayerId.P1].hand = []
+    deck0 = len(initial_state.coral_deck)
+
+    s = apply_action(initial_state, BuyCoralsAction())  # 2 base + 1 (leafy) = 3
+
+    assert len(s.players[PlayerId.P1].hand) == 3
+    assert len(s.coral_deck) == deck0 - 3
+
+
+def test_hatchetfish_scores_four(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _give(initial_state, "hatchetfish")
+    initial_state.players[PlayerId.P1].resources[ResourceType.PLANKTON] = 5
+
+    s = apply_action(initial_state, PlayFaunaAction("hatchetfish", (0, 0, 0)))
+
+    assert s.players[PlayerId.P1].score == 5  # staghorn(1) + hatchetfish(4)
 
 
 def test_fauna_deck_counts_respect_rarity(fauna_defs):

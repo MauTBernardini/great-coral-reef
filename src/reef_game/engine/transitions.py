@@ -78,6 +78,10 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
         player.resources[resource] -= amount
         player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
 
+    # Saque imediato ao jogar (Cyclothone).
+    if fauna.on_play_draw:
+        _draw_cards(state, player, fauna.on_play_draw)
+
     score_before = player.score
     recompute_scores(state)
     gained = player.score - score_before
@@ -122,15 +126,31 @@ def _apply_place_soil(state, action: PlaceSoilAction):
     )
 
 
+def _explore_bonus(state, owner) -> int:
+    """+cartas por compra vindo de fauna no board (Leafy Seadragon)."""
+    bonus = 0
+    for cell in state.board.cells.values():
+        occupant = cell.occupant
+        if occupant is not None and occupant.owner == owner:
+            for fauna_id in cell.fauna:
+                fauna = state.available_fauna.get(fauna_id)
+                if fauna is not None:
+                    bonus += fauna.explore_bonus
+    return bonus
+
+
+def _draw_cards(state, player, count) -> list:
+    space = MAX_HAND_SIZE - len(player.hand)
+    drawn = min(count, space, len(state.coral_deck))
+    bought = [state.coral_deck.pop(0) for _ in range(drawn)]
+    player.hand.extend(bought)
+    return bought
+
+
 def _apply_buy_corals(state, action: BuyCoralsAction):
     player = state.players[state.active_player]
-    space = MAX_HAND_SIZE - len(player.hand)
-    drawn = min(action.count, space, len(state.coral_deck))
-
-    bought = []
-    for _ in range(drawn):
-        bought.append(state.coral_deck.pop(0))
-    player.hand.extend(bought)
+    total = action.count + _explore_bonus(state, state.active_player)  # Leafy Seadragon
+    bought = _draw_cards(state, player, total)
 
     player.bought_corals_this_round = True  # só 1 compra por rodada
     player.passed_last_turn = False
@@ -139,7 +159,7 @@ def _apply_buy_corals(state, action: BuyCoralsAction):
         action,
         {
             "result": "buy_corals",
-            "requested": action.count,
+            "requested": total,
             "bought": bought,
             "hand_size": len(player.hand),
         },

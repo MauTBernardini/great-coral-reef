@@ -98,6 +98,17 @@ def resolve_production(state) -> dict:
             n_fauna = o2_produced
         gains[player_id][ResourceType.O2] = o2_produced - n_fauna  # net (>= 0)
 
+    # Produção da fauna SOBREVIVENTE (ex.: Lanternfish +1 Sol).
+    for cell in state.board.cells.values():
+        occupant = cell.occupant
+        if occupant is None:
+            continue
+        for fauna_id in cell.fauna:
+            fauna = state.available_fauna.get(fauna_id)
+            if fauna is not None:
+                for resource, amount in fauna.production.items():
+                    gains[occupant.owner][resource] += amount
+
     for player_id, player in state.players.items():
         for resource, amount in gains[player_id].items():
             if amount:

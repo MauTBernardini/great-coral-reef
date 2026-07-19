@@ -65,6 +65,9 @@ def load_fauna(path: str | Path) -> dict[str, FaunaDefinition]:
             deck_count=item.get("deck_count", 0),
             habitat_cost=item.get("habitat_cost", 1),
             required_soil=item.get("required_soil"),
+            production={ResourceType(k): v for k, v in item.get("production", {}).items()},
+            on_play_draw=item.get("on_play_draw", 0),
+            explore_bonus=item.get("explore_bonus", 0),
         )
         result[fauna.fauna_id] = fauna
 

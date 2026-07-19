@@ -69,6 +69,12 @@ class FaunaDefinition:
     habitat_cost: int = 1
     # Só pode ser jogada num coral cuja base seja este solo (Mandarin: rocky_reef).
     required_soil: Optional[str] = None
+    # Recursos que a fauna gera na Fase de Produção (Lanternfish: +1 Sol).
+    production: Dict[ResourceType, int] = field(default_factory=dict)
+    # Ao ser jogada, saca imediatamente N cartas do baralho (Cyclothone: 1).
+    on_play_draw: int = 0
+    # Enquanto no board, cada compra de cartas ("explore") saca +N (Leafy Seadragon: 1).
+    explore_bonus: int = 0
 
 
 @dataclass(frozen=True)
