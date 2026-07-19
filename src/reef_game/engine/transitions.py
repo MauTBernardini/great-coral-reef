@@ -12,6 +12,7 @@ from .actions import (
 from .economy import effective_cost
 from .enums import ActionType, PlayerId, ResourceType
 from .models import MAX_HAND_SIZE, PlacedCoral, PlacedSoil
+from .ponds import maybe_form_pond
 from .production import resolve_production
 from .scoring import (
     count_adjacent_fauna,
@@ -321,6 +322,9 @@ def _place_coral_on_board(state, coral_id, position) -> str:
             )
 
     player.placed_corals += 1
+    # Se este coral fechou um ciclo, forma uma pond (dono = quem colocou) e pode
+    # render uma oferta de Instinto.
+    maybe_form_pond(state, position, state.active_player)
     return instance_id
 
 

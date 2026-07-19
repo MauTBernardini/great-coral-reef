@@ -33,6 +33,7 @@ def _player_board(state, player_id):
 
 def _player_snapshot(state, player):
     corals, soils, fauna, by_layer, habitat_capacity = _player_board(state, player.player_id)
+    ponds_count = sum(1 for pond in state.ponds if pond.owner == player.player_id)
     return {
         "resources": _resource_map(player.resources),          # sol, plancton e o2 atuais
         "produced": _resource_map(player.produced_resources),   # produzido acumulado
@@ -49,6 +50,8 @@ def _player_snapshot(state, player):
         "habitat_capacity": habitat_capacity,                  # capacidade total p/ fauna
         "fauna": fauna,                                        # fauna jogada nos corais
         "fauna_count": len(fauna),
+        "ponds_count": ponds_count,                            # ponds que o player possui
+        "instincts_count": len(player.instinct_cards),         # cartas de Instinto que possui
     }
 
 
@@ -117,6 +120,8 @@ class GameTelemetry:
                         "hand_size": p["hand_size"],
                         "soils_count": p["soils_count"],
                         "fauna_count": p["fauna_count"],
+                        "ponds": p["ponds_count"],
+                        "instincts": p["instincts_count"],
                         "corals_z0": p["corals_by_layer"].get(0, 0),
                         "corals_z1": p["corals_by_layer"].get(1, 0),
                         "corals_z2": p["corals_by_layer"].get(2, 0),

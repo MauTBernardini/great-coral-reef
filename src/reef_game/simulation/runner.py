@@ -8,7 +8,7 @@ from ..engine.actions import (
     PlayFaunaAction,
     PlayParasiteAction,
 )
-from ..engine.scoring import orthogonal_neighbors_3d
+from ..engine.scoring import orthogonal_neighbors_3d, recompute_scores
 from ..engine.transitions import apply_action
 from ..engine.validators import InvalidActionError, validate_action
 from .metrics import summarize_game
@@ -74,7 +74,7 @@ def enumerate_legal_actions(state):
                 pass
 
     # Parasitismo: jogar fauna da mão em coral INIMIGO (só quem tem a carta de Instinto).
-    if state.players[active].instinct_card == "opportunistic_parasite":
+    if "opportunistic_parasite" in state.players[active].instinct_cards:
         enemy_coral_positions = [
             pos for pos, cell in state.board.cells.items()
             if cell.occupant is not None and cell.occupant.owner != active
@@ -125,12 +125,24 @@ def enumerate_legal_actions(state):
     return actions
 
 
+def _resolve_instinct_offers(state, agents: dict) -> None:
+    """Resolve ofertas de Instinto pendentes (inicial + de ponds): o agente escolhe 1
+    de cada oferta; as não-escolhidas são descartadas."""
+    changed = False
+    for pid, player in state.players.items():
+        while player.pending_instinct_offers:
+            offer = player.pending_instinct_offers.pop(0)
+            choice = agents[pid].choose_instinct(state, pid, offer) or offer[0]
+            if choice not in player.instinct_cards:
+                player.instinct_cards.append(choice)
+            changed = True
+    if changed:
+        recompute_scores(state)
+
+
 def run_game(initial_state, agents: dict, max_rounds: int | None = None):
     state = initial_state
-    # Escolha de Instinto (1 de 2) no início da partida, por jogador.
-    for pid, player in state.players.items():
-        if player.instinct_options and player.instinct_card is None:
-            player.instinct_card = agents[pid].choose_instinct(state, pid, player.instinct_options)
+    _resolve_instinct_offers(state, agents)  # escolha inicial de Instinto
     telemetry = GameTelemetry()
     telemetry.record_state(state)
 
@@ -139,6 +151,7 @@ def run_game(initial_state, agents: dict, max_rounds: int | None = None):
         agent = agents[state.active_player]
         action = agent.choose_action(state, legal_actions)
         state = apply_action(state, action, max_rounds=max_rounds)
+        _resolve_instinct_offers(state, agents)  # ponds podem render novas ofertas
         telemetry.record_state(state)
 
     return state, summarize_game(state, telemetry), telemetry

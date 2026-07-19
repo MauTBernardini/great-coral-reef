@@ -438,17 +438,17 @@ _INSTINCT_RULES = {
 
 
 def score_instinct(state, player_id) -> int:
-    """Pontos da carta de Instinto escolhida pelo jogador (0 se não tiver)."""
-    card_id = state.players[player_id].instinct_card
-    if card_id is None:
-        return 0
-    inst = state.available_instincts.get(card_id)
-    if inst is None:
-        return 0
-    rule = _INSTINCT_RULES.get(inst.rule)
-    if rule is None:
-        return 0
-    return inst.points * rule(state, player_id)
+    """Soma dos pontos de TODAS as cartas de Instinto do jogador (0 se não tiver)."""
+    total = 0
+    for card_id in state.players[player_id].instinct_cards:
+        inst = state.available_instincts.get(card_id)
+        if inst is None:
+            continue
+        rule = _INSTINCT_RULES.get(inst.rule)
+        if rule is None:
+            continue
+        total += inst.points * rule(state, player_id)
+    return total
 
 
 def compute_player_score(state, player_id) -> int:

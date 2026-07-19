@@ -7,7 +7,7 @@ from reef_game.engine.actions import PlayParasiteAction
 from reef_game.engine.enums import PlayerId, ResourceType
 from reef_game.engine.models import PlacedCoral, PlacedSoil
 from reef_game.engine.scoring import compute_player_score, score_instinct
-from reef_game.engine.setup import deal_instinct_options
+from reef_game.engine.setup import build_instinct_deck, draw_instinct_offer
 from reef_game.engine.transitions import apply_action
 from reef_game.engine.validators import InvalidActionError, validate_action
 
@@ -25,24 +25,25 @@ def _soil(state, pos, soil_id, owner=PlayerId.P1):
 
 def _with_instinct(state, card_id, owner=PlayerId.P1):
     state.available_instincts = INSTINCTS
-    state.players[owner].instinct_card = card_id
+    state.players[owner].instinct_cards = [card_id]
     return state
 
 
 # ---------------- Mecânica de escolha ----------------
 
-def test_deal_offers_two_distinct_cards_per_player():
-    opts = deal_instinct_options(1234, INSTINCTS)
-    assert len(opts[PlayerId.P1]) == 2
-    assert len(opts[PlayerId.P2]) == 2
-    # As 4 cartas oferecidas são distintas entre si.
-    assert set(opts[PlayerId.P1]).isdisjoint(opts[PlayerId.P2])
-    assert len(set(opts[PlayerId.P1])) == 2
+def test_deck_and_offers_are_distinct():
+    deck = build_instinct_deck(1234, INSTINCTS)
+    assert len(deck) == len(INSTINCTS)
+    o1 = draw_instinct_offer(deck)
+    o2 = draw_instinct_offer(deck)
+    assert len(o1) == 2 and len(o2) == 2
+    # Ofertas sacam sem reposição -> distintas e o baralho encolhe.
+    assert set(o1).isdisjoint(o2)
+    assert len(deck) == len(INSTINCTS) - 4
 
 
-def test_no_instinct_definitions_deals_empty():
-    opts = deal_instinct_options(1, {})
-    assert opts[PlayerId.P1] == [] and opts[PlayerId.P2] == []
+def test_empty_instinct_deck():
+    assert build_instinct_deck(1, {}) == []
 
 
 def test_score_instinct_zero_without_card(initial_state):
@@ -165,7 +166,7 @@ def test_parasite_action_requires_card_and_enemy_coral(initial_state):
         validate_action(initial_state, PlayParasiteAction("clownfish", (0, 0, 0)))
 
     # Com a carta, mas em coral PRÓPRIO -> inválido.
-    initial_state.players[PlayerId.P1].instinct_card = "opportunistic_parasite"
+    initial_state.players[PlayerId.P1].instinct_cards = ["opportunistic_parasite"]
     _coral(initial_state, "staghorn", (1, 0, 0), owner=PlayerId.P1)
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, PlayParasiteAction("clownfish", (1, 0, 0)))
@@ -176,7 +177,7 @@ def test_parasite_action_requires_card_and_enemy_coral(initial_state):
 
 def test_parasite_play_end_to_end(initial_state):
     initial_state.available_instincts = INSTINCTS
-    initial_state.players[PlayerId.P1].instinct_card = "opportunistic_parasite"
+    initial_state.players[PlayerId.P1].instinct_cards = ["opportunistic_parasite"]
     _coral(initial_state, "staghorn", (0, 0, 0), owner=PlayerId.P2)  # habitat 2
     initial_state.players[PlayerId.P1].hand.append("clownfish")
     initial_state.players[PlayerId.P1].resources = {
@@ -190,6 +191,16 @@ def test_parasite_play_end_to_end(initial_state):
     # P1: clownfish(2) + instinct parasita(3) = 5 ; P2: só staghorn(1)
     assert s.players[PlayerId.P1].score == 5
     assert s.players[PlayerId.P2].score == 1
+
+
+def test_multiple_instincts_sum(initial_state):
+    top = initial_state.board.max_layers - 1
+    _coral(initial_state, "staghorn", (0, 1, 0))    # borda -> outer_wall
+    _coral(initial_state, "staghorn", (0, 0, top))  # topo + borda
+    initial_state.available_instincts = INSTINCTS
+    initial_state.players[PlayerId.P1].instinct_cards = ["outer_wall", "vertical_architect"]
+    # outer_wall: 2 corais na borda -> 2*2=4 ; vertical_architect: 1 no topo -> 3
+    assert score_instinct(initial_state, PlayerId.P1) == 4 + 3
 
 
 def test_instinct_adds_to_player_score(initial_state):

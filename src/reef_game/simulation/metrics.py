@@ -60,6 +60,23 @@ def _habitat_by_player(state):
     return totals
 
 
+def _distribution_stats(values):
+    """média, mediana, p25 e p75 de uma série (0 se vazia)."""
+    if not values:
+        return {"mean": 0.0, "median": 0.0, "p25": 0.0, "p75": 0.0}
+    if len(values) >= 2:
+        q = statistics.quantiles(values, n=4, method="inclusive")
+        p25, p75 = q[0], q[2]
+    else:
+        p25 = p75 = float(values[0])
+    return {
+        "mean": statistics.fmean(values),
+        "median": statistics.median(values),
+        "p25": p25,
+        "p75": p75,
+    }
+
+
 def summarize_game(state, telemetry):
     players = state.players
     soils_on_board = _soils_on_board(state)
@@ -96,9 +113,19 @@ def summarize_game(state, telemetry):
         "soil_pile_remaining": len(state.soil_pile),
         "coral_deck_remaining": len(state.coral_deck),
         "action_history_length": len(state.action_history),
-        "instinct_card": {pid.value: p.instinct_card for pid, p in players.items()},
+        "instinct_cards": {pid.value: list(p.instinct_cards) for pid, p in players.items()},
         "instinct_points": {pid.value: score_instinct(state, pid) for pid in players},
+        "ponds": {
+            pid.value: sum(1 for pond in state.ponds if pond.owner == pid) for pid in players
+        },
     }
+
+    # Distribuição de ponds e instintos AO LONGO do jogo (sobre os snapshots turno a turno).
+    for pid in players:
+        ponds_series = [s["players"][pid.value]["ponds_count"] for s in telemetry.states]
+        instincts_series = [s["players"][pid.value]["instincts_count"] for s in telemetry.states]
+        summary[f"ponds_stats_{pid.value}"] = _distribution_stats(ponds_series)
+        summary[f"instincts_stats_{pid.value}"] = _distribution_stats(instincts_series)
 
     for pid, p in players.items():
         total_spent = sum(p.spent_resources.values()) or 1

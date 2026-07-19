@@ -187,9 +187,21 @@ class PlayerState:
     moved_fauna_this_round: bool = False
     # Tiles (posições 3D) já visitados por Moon Jellies deste jogador — pontuam por exploração.
     moon_jelly_visited: Set[Coord3D] = field(default_factory=set)
-    # As 2 cartas de Instinto oferecidas no início; e a escolhida (pontua no fim).
-    instinct_options: List[str] = field(default_factory=list)
-    instinct_card: Optional[str] = None
+    # Cartas de Instinto que o jogador possui (inicial + extras de ponds; pontuam no fim).
+    # Máx. 4 (1 inicial + 3 extras).
+    instinct_cards: List[str] = field(default_factory=list)
+    # Ofertas pendentes de Instinto (cada uma = lista de opções p/ escolher 1). Resolvidas
+    # pelo runner (que tem acesso ao agente). Alimentadas no setup e ao formar ponds.
+    pending_instinct_offers: List[List[str]] = field(default_factory=list)
+
+
+@dataclass
+class PondState:
+    """Uma 'pond' formada: conjunto fechado de corais (um ciclo numa camada) que
+    pertence a quem colocou o coral que a fechou."""
+
+    cells: frozenset  # frozenset[Coord3D]
+    owner: PlayerId
 
 
 @dataclass
@@ -231,3 +243,7 @@ class GameState:
     available_fauna: Dict[str, "FaunaDefinition"] = field(default_factory=dict)
     # Cartas de Instinto disponíveis no jogo (id -> definição).
     available_instincts: Dict[str, "InstinctDefinition"] = field(default_factory=dict)
+    # Baralho de Instinto restante (ids embaralhados); ofertas sacam daqui.
+    instinct_deck: List[str] = field(default_factory=list)
+    # Ponds formadas no jogo (para roubo e regra de interseção).
+    ponds: List["PondState"] = field(default_factory=list)

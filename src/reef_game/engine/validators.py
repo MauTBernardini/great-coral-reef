@@ -122,7 +122,7 @@ PARASITE_CARD_ID = "opportunistic_parasite"
 def _validate_play_parasite(state, action) -> None:
     player = state.players[state.active_player]
 
-    if player.instinct_card != PARASITE_CARD_ID:
+    if PARASITE_CARD_ID not in player.instinct_cards:
         raise InvalidActionError("Requires the Opportunistic Parasite instinct card.")
     if action.fauna_id not in state.available_fauna:
         raise InvalidActionError("Unknown fauna_id.")

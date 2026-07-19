@@ -160,8 +160,15 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             row[f"p{pid}_fauna_total"] = sum(fauna_by_type.values())
             row[f"p{pid}_habitat"] = summary["habitat_capacity"][pid]
             row[f"p{pid}_produced_o2"] = summary["produced_resources"][pid].get("o2", 0)
-            row[f"p{pid}_instinct"] = summary["instinct_card"][pid]
+            row[f"p{pid}_instincts"] = ";".join(summary["instinct_cards"][pid])
             row[f"p{pid}_instinct_points"] = summary["instinct_points"][pid]
+            row[f"p{pid}_ponds"] = summary["ponds"][pid]
+            # Distribuição ao longo do jogo (turno a turno): ponds e instintos.
+            ponds_stats = summary[f"ponds_stats_{pid}"]
+            instincts_stats = summary[f"instincts_stats_{pid}"]
+            for stat in ("mean", "median", "p25", "p75"):
+                row[f"p{pid}_ponds_{stat}"] = round(ponds_stats[stat], 3)
+                row[f"p{pid}_instincts_{stat}"] = round(instincts_stats[stat], 3)
         rows.append(row)
 
     df = pd.DataFrame(rows)
