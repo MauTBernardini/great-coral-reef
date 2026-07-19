@@ -54,13 +54,13 @@ class PlaceSoilAction(Action):
 
 
 @dataclass(frozen=True)
-class BuyFloraAction(Action):
-    """Comprar 2 cartas de flora fechadas (sacar do deck para a mão, teto de 10)."""
+class BuyCoralsAction(Action):
+    """Comprar 2 cartas de coral fechadas (sacar do baralho para a mão, teto de 10)."""
 
     count: int = 2
 
     def __init__(self, count: int = 2):
-        object.__setattr__(self, "action_type", ActionType.BUY_FLORA)
+        object.__setattr__(self, "action_type", ActionType.BUY_CORALS)
         object.__setattr__(self, "count", count)
 
 

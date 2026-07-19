@@ -1,5 +1,5 @@
 from ..engine.actions import (
-    BuyFloraAction,
+    BuyCoralsAction,
     PassAction,
     PlaceCoralAction,
     PlaceSoilAction,
@@ -16,12 +16,13 @@ STAGHORN_ID = "staghorn"
 def enumerate_legal_actions(state):
     actions = [PassAction()]
     legal_staghorn_positions = []
+    hand = state.players[state.active_player].hand
 
-    # Comprar 2 cartas de flora (se há deck e espaço na mão).
-    flora = BuyFloraAction()
+    # Comprar 2 cartas de coral (se há baralho e espaço na mão).
+    buy = BuyCoralsAction()
     try:
-        validate_action(state, flora)
-        actions.append(flora)
+        validate_action(state, buy)
+        actions.append(buy)
     except InvalidActionError:
         pass
 
@@ -36,7 +37,8 @@ def enumerate_legal_actions(state):
             except InvalidActionError:
                 pass
 
-    for coral_id in state.available_corals:
+    # Só corais que estão na mão do jogador podem ser construídos.
+    for coral_id in set(hand):
         for pos, cell in state.board.cells.items():
             if cell.occupant is None:
                 action = PlaceCoralAction(coral_id=coral_id, position=pos)

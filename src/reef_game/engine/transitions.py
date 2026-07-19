@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from .actions import (
-    BuyFloraAction,
+    BuyCoralsAction,
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
@@ -49,8 +49,8 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
-    if action.action_type == ActionType.BUY_FLORA:
-        _apply_buy_flora(next_state, action)
+    if action.action_type == ActionType.BUY_CORALS:
+        _apply_buy_corals(next_state, action)
         _advance_turn(next_state)
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
@@ -102,14 +102,14 @@ def _apply_place_soil(state, action: PlaceSoilAction):
     )
 
 
-def _apply_buy_flora(state, action: BuyFloraAction):
+def _apply_buy_corals(state, action: BuyCoralsAction):
     player = state.players[state.active_player]
     space = MAX_HAND_SIZE - len(player.hand)
-    drawn = min(action.count, space, len(state.flora_deck))
+    drawn = min(action.count, space, len(state.coral_deck))
 
     bought = []
     for _ in range(drawn):
-        bought.append(state.flora_deck.pop(0))
+        bought.append(state.coral_deck.pop(0))
     player.hand.extend(bought)
 
     player.passed_last_turn = False
@@ -117,7 +117,7 @@ def _apply_buy_flora(state, action: BuyFloraAction):
         state,
         action,
         {
-            "result": "buy_flora",
+            "result": "buy_corals",
             "requested": action.count,
             "bought": bought,
             "hand_size": len(player.hand),
@@ -126,10 +126,14 @@ def _apply_buy_flora(state, action: BuyFloraAction):
 
 
 def _place_coral_on_board(state, coral_id, position) -> str:
-    """Commit one coral to the board and pay its (effective) cost. Returns its id."""
+    """Commit one coral to the board, gasta a carta da mão e paga o custo. Returns its id."""
     player = state.players[state.active_player]
     coral = state.available_corals[coral_id]
     cell = state.board.cells[position]
+
+    # Gasta a carta de coral da mão.
+    if coral_id in player.hand:
+        player.hand.remove(coral_id)
 
     px, py, pz = position
     instance_id = f"{coral_id}_{state.turn}_{state.active_player.value}_{px}{py}{pz}"

@@ -8,7 +8,8 @@ from reef_game.engine.validators import InvalidActionError, validate_action
 
 
 def test_coral_requires_soil_at_column_base(initial_state):
-    # No soil placed yet -> any coral placement is rejected.
+    # No soil placed yet -> any coral placement is rejected (mesmo com a carta na mão).
+    initial_state.players[PlayerId.P1].hand.append("grooved_brain_coral")
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, PlaceCoralAction("grooved_brain_coral", (0, 0, 0)))
 

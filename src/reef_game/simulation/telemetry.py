@@ -63,7 +63,7 @@ class GameTelemetry:
             "consumed_climate_cards": len(state.climate_discard),
             "occupancy_ratio": occupied_cells_count(state) / board_capacity(state),
             "soil_pile_remaining": len(state.soil_pile),
-            "flora_deck_remaining": len(state.flora_deck),
+            "coral_deck_remaining": len(state.coral_deck),
             # --- compat com metrics.summarize_game (mantidos no topo) ---
             "scores": {pid.value: p.score for pid, p in state.players.items()},
             "placed_corals": {pid.value: p.placed_corals for pid, p in state.players.items()},
@@ -91,7 +91,7 @@ class GameTelemetry:
                         "consumed_climate_cards": snap["consumed_climate_cards"],
                         "occupancy_ratio": snap["occupancy_ratio"],
                         "soil_pile_remaining": snap["soil_pile_remaining"],
-                        "flora_deck_remaining": snap["flora_deck_remaining"],
+                        "coral_deck_remaining": snap["coral_deck_remaining"],
                         "player": player_id,
                         "sun": p["resources"]["sun"],
                         "plankton": p["resources"]["plankton"],

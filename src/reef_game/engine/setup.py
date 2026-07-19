@@ -4,7 +4,7 @@ from random import Random
 import yaml
 
 from .enums import PlayerId, ResourceType
-from .models import BoardState, Cell, ClimateCard, GameState, PlayerState
+from .models import STARTING_HAND_SIZE, BoardState, Cell, ClimateCard, GameState, PlayerState
 
 
 def create_empty_board(width: int, height: int, max_layers: int) -> BoardState:
@@ -80,10 +80,10 @@ def build_soil_pile(seed: int, soil_definitions: dict) -> list[str]:
     return pile
 
 
-def build_flora_deck(seed: int, flora_definitions: dict) -> list[str]:
+def build_coral_deck(seed: int, coral_definitions: dict) -> list[str]:
     deck = []
-    for flora_id, flora in flora_definitions.items():
-        deck.extend([flora_id] * flora.count)
+    for coral_id, coral in coral_definitions.items():
+        deck.extend([coral_id] * coral.deck_count)
     Random(seed + 202).shuffle(deck)
     return deck
 
@@ -94,14 +94,12 @@ def create_initial_state(
     balance_rules: dict | None = None,
     climate_config: dict | None = None,
     soil_definitions: dict | None = None,
-    flora_definitions: dict | None = None,
 ) -> GameState:
     balance_rules = balance_rules or _default_balance_rules()
     climate_config = climate_config or {"deck": []}
     soil_definitions = soil_definitions or {}
-    flora_definitions = flora_definitions or {}
     soil_pile = build_soil_pile(seed, soil_definitions)
-    flora_deck = build_flora_deck(seed, flora_definitions)
+    coral_deck = build_coral_deck(seed, coral_definitions)
 
     board_cfg = balance_rules["board"]
     resource_cfg = balance_rules["players"]["initial_resources"]
@@ -127,16 +125,22 @@ def create_initial_state(
     def zeroed():
         return {ResourceType.SUN: 0, ResourceType.PLANKTON: 0}
 
+    def deal_hand():
+        n = min(STARTING_HAND_SIZE, len(coral_deck))
+        return [coral_deck.pop(0) for _ in range(n)]
+
     players = {
         PlayerId.P1: PlayerState(
             player_id=PlayerId.P1,
             resources=initial_resources(),
+            hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
         ),
         PlayerId.P2: PlayerState(
             player_id=PlayerId.P2,
             resources=initial_resources(),
+            hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
         ),
@@ -161,6 +165,5 @@ def create_initial_state(
         climate_deck=build_climate_deck(seed=seed, climate_cfg=climate_deck_cfg),
         available_soils=soil_definitions,
         soil_pile=soil_pile,
-        available_flora=flora_definitions,
-        flora_deck=flora_deck,
+        coral_deck=coral_deck,
     )

@@ -10,6 +10,8 @@ from reef_game.simulation.tournament import TournamentConfig, run_tournament
 
 
 def test_snapshot_captures_full_per_player_state(soiled_state):
+    # P1 com exatamente 1 carta -> após construir, a mão fica vazia (testa o consumo).
+    soiled_state.players[PlayerId.P1].hand = ["grooved_brain_coral"]
     tel = GameTelemetry()
     tel.record_state(soiled_state)
     state = apply_action(soiled_state, PlaceCoralAction("grooved_brain_coral", (0, 0, 0)))

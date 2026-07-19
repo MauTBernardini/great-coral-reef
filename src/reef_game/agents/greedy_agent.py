@@ -32,9 +32,10 @@ class GreedyAgent(BaseAgent):
         if action.action_type == ActionType.PASS:
             return -9999
 
-        if action.action_type == ActionType.BUY_FLORA:
-            # Flora ainda não tem efeito; ligeiramente acima de passar.
-            return 0.05
+        if action.action_type == ActionType.BUY_CORALS:
+            # Comprar cartas é essencial (só constrói o que está na mão).
+            hand = state.players[owner].hand
+            return 2.0 if not hand else 0.4
 
         if action.action_type == ActionType.PLACE_SOIL:
             soil_id = state.soil_pile[0]

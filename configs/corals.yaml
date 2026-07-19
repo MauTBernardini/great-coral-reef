@@ -1,3 +1,7 @@
+# deck_count = quantas cópias deste coral existem no baralho fechado de corais
+# (a "disponibilidade" do coral). Compra-se cartas do baralho para a mão (teto de 10)
+# e constrói-se corais gastando a carta correspondente da mão.
+# Total do baralho: 8+6+8+4+4+6+8+6 = 50 cartas.
 corals:
   - coral_id: staghorn
     name: Staghorn Coral
@@ -5,10 +9,9 @@ corals:
       sun: 3
     base_points: 2
     traits: [branching]
-    max_height_gain: 1
     requires_support: true
-    # Apenas as duas camadas mais ao topo (não pode ser construído no fundo).
     allowed_layers: [1, 2]
+    deck_count: 8
 
   - coral_id: elkhorn
     name: Elkhorn Coral
@@ -17,8 +20,8 @@ corals:
       plankton: 1
     base_points: 3
     traits: [branching]
-    max_height_gain: 1
     requires_support: true
+    deck_count: 6
 
   - coral_id: grooved_brain_coral
     name: Grooved Brain Coral
@@ -26,10 +29,9 @@ corals:
       sun: 2
     base_points: 3
     traits: [massive]
-    max_height_gain: 1
     requires_support: true
-    # Apenas as duas primeiras camadas (fundo e a camada seguinte).
     allowed_layers: [0, 1]
+    deck_count: 8
 
   - coral_id: fox_coral
     name: Fox Coral
@@ -39,13 +41,11 @@ corals:
     base_points: 0
     traits: []
     requires_support: true
-    # Layer 2 ou 3 (z=1 ou z=2).
     allowed_layers: [1, 2]
     production:
       plankton: 1
-    # Oponentes não podem construir em células vizinhas (mesma camada).
     blocks_opponent_adjacent: true
-    # Scoring: 2 pontos por tile vizinho (mesma camada) vazio.
+    deck_count: 4
 
   - coral_id: sun_coral
     name: Sun Coral
@@ -56,9 +56,8 @@ corals:
     requires_support: true
     production:
       plankton: 1
-    # Só pode ser construído em coluna cuja base seja Dark Overhang.
     required_soil: dark_overhang
-    # Scoring: 5 pontos fixos.
+    deck_count: 4
 
   - coral_id: gorgonian_sea_fan
     name: Gorgonian Sea Fan
@@ -70,7 +69,7 @@ corals:
     requires_support: true
     production:
       plankton: 2
-    # Scoring: 2 pontos por Gorgonian Sea Fan (mesmo dono) na mesma coluna vertical.
+    deck_count: 6
 
   - coral_id: branched_finger_coral
     name: Branched Finger Coral
@@ -79,10 +78,9 @@ corals:
     base_points: 1
     traits: []
     requires_support: true
-    # Habilidade: se construído numa coluna Rocky Reef, devolve 1 Sol.
     refund_soil: rocky_reef
     refund_sun: 1
-    # Scoring: 1 ponto fixo.
+    deck_count: 8
 
   - coral_id: bubble_coral
     name: Bubble Coral
@@ -92,8 +90,7 @@ corals:
     base_points: 0
     traits: []
     requires_support: true
-    # Apenas as duas primeiras camadas.
     allowed_layers: [0, 1]
     production:
       plankton: 1
-    # Scoring: 2 pontos se adjacente (mesma camada) a >=2 tipos diferentes de coral.
+    deck_count: 6

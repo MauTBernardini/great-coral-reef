@@ -70,7 +70,7 @@ def summarize_game(state, telemetry):
         "corals_by_type": _corals_by_type(state),
         "soils_by_type": _soils_by_type(state),
         "soil_pile_remaining": len(state.soil_pile),
-        "flora_deck_remaining": len(state.flora_deck),
+        "coral_deck_remaining": len(state.coral_deck),
         "action_history_length": len(state.action_history),
     }
 

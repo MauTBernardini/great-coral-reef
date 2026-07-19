@@ -14,7 +14,7 @@ except ImportError:
 from ..agents.greedy_agent import GreedyAgent
 from ..agents.long_term_agent import LongTermAgent
 from ..agents.random_agent import RandomAgent
-from ..content.loader import load_corals, load_flora, load_soils, load_yaml_config
+from ..content.loader import load_corals, load_soils, load_yaml_config
 from ..engine.enums import PlayerId
 from ..engine.setup import create_initial_state, load_balance_rules, load_climate_config
 from .runner import run_game
@@ -25,7 +25,6 @@ class TournamentConfig:
     games: int = 100
     corals_path: str = "configs/corals.yaml"
     soils_path: str = "configs/soils.yaml"
-    flora_path: str = "configs/flora.yaml"
     balance_rules_path: str = "configs/balance_rules.yaml"
     climate_path: str = "configs/climate.yaml"
     version_path: str = "configs/version.yaml"
@@ -54,7 +53,6 @@ AGENT_FACTORY = {
 def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     corals = load_corals(config.corals_path)
     soils = load_soils(config.soils_path)
-    flora = load_flora(config.flora_path)
     balance_rules = load_balance_rules(config.balance_rules_path)
     climate_config = load_climate_config(config.climate_path)
     version_config = load_yaml_config(config.version_path)
@@ -79,7 +77,6 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             balance_rules=balance_rules,
             climate_config=climate_config,
             soil_definitions=soils,
-            flora_definitions=flora,
         )
         # Atribuição de agente a cada cadeira (opcionalmente trocada por seed).
         p1_agent, p2_agent = config.agent_p1, config.agent_p2
@@ -133,7 +130,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
                 "p1_hand": summary["hand_size"][1],
                 "p2_hand": summary["hand_size"][2],
                 "soil_pile_remaining": summary["soil_pile_remaining"],
-                "flora_deck_remaining": summary["flora_deck_remaining"],
+                "coral_deck_remaining": summary["coral_deck_remaining"],
                 "terminal": final_state.is_terminal,
         }
         # Volume por tipo de coral e de solo, por jogador (para análise volume x score).
@@ -163,14 +160,13 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
 
 def _play_scored_game(content, seed, p1_name, p2_name, max_rounds):
-    corals, soils, flora, balance_rules, climate_config = content
+    corals, soils, balance_rules, climate_config = content
     state = create_initial_state(
         seed=seed,
         coral_definitions=corals,
         balance_rules=balance_rules,
         climate_config=climate_config,
         soil_definitions=soils,
-        flora_definitions=flora,
     )
     agents = {
         PlayerId.P1: AGENT_FACTORY[p1_name](seed),
@@ -186,7 +182,6 @@ def run_paired_tournament(config: TournamentConfig) -> pd.DataFrame:
     content = (
         load_corals(config.corals_path),
         load_soils(config.soils_path),
-        load_flora(config.flora_path),
         load_balance_rules(config.balance_rules_path),
         load_climate_config(config.climate_path),
     )
@@ -334,7 +329,7 @@ def summarize_tournament(df: pd.DataFrame) -> dict:
             (df["p1_produced_sun"] + df["p2_produced_sun"]).mean() / 2
         ),
         "avg_hand_per_player": float((df["p1_hand"] + df["p2_hand"]).mean() / 2),
-        "avg_flora_deck_remaining": float(df["flora_deck_remaining"].mean()),
+        "avg_coral_deck_remaining": float(df["coral_deck_remaining"].mean()),
     }
 
 

@@ -11,7 +11,8 @@ invests for the future:
   enable the +1 Sun production cluster).
 * Loves the **staghorn pair** (starts a 2-cluster in one action) — exactly what
   the greedy ignores.
-* Refuses to waste turns hoarding useless flora; it would rather pass.
+* Compra cartas de coral quando precisa (só constrói o que está na mão), mas prefere
+  passar a desperdiçar turno numa compra de solo impagável.
 
 It is a heuristic (no search), evaluating each action cheaply — same order of cost
 as the greedy — but with a value function tuned for the long game.
@@ -90,12 +91,13 @@ class LongTermAgent(BaseAgent):
         owner = state.active_player
 
         if action.action_type == ActionType.PASS:
-            # Preferível a desperdiçar turno com flora inútil ou compra impagável.
+            # Preferível a desperdiçar turno com compra de solo impagável.
             return -1.0
 
-        if action.action_type == ActionType.BUY_FLORA:
-            # Flora não tem efeito ainda; evitar encher a mão à toa.
-            return -2.0
+        if action.action_type == ActionType.BUY_CORALS:
+            # Comprar cartas é essencial (só constrói o que está na mão).
+            hand = state.players[owner].hand
+            return 2.0 if not hand else 0.4
 
         if action.action_type == ActionType.PLACE_SOIL:
             soil_id = state.soil_pile[0]

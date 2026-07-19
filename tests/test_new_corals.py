@@ -18,6 +18,10 @@ def _coral(state, coral_id, position, owner):
     )
 
 
+def _give(state, coral_id, owner=PlayerId.P1, n=1):
+    state.players[owner].hand.extend([coral_id] * n)
+
+
 # ---------------- Fox Coral ----------------
 
 def test_fox_coral_scores_two_per_empty_same_layer_neighbor(initial_state):
@@ -31,6 +35,7 @@ def test_fox_coral_scores_two_per_empty_same_layer_neighbor(initial_state):
 
 
 def test_fox_coral_only_on_layers_2_and_3(initial_state):
+    _give(initial_state, "fox_coral")
     _soil(initial_state, (1, 1, 0), "sandy_bed")
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, PlaceCoralAction("fox_coral", (1, 1, 0)))  # z=0 proibido
@@ -42,6 +47,7 @@ def test_fox_coral_blocks_opponent_from_adjacent_cell(initial_state):
     _soil(initial_state, (2, 1, 0), "sandy_bed", owner=PlayerId.P2)
     _coral(initial_state, "grooved_brain_coral", (2, 1, 0), PlayerId.P2)  # suporte p/ (2,1,1)
     initial_state.active_player = PlayerId.P2
+    _give(initial_state, "grooved_brain_coral", owner=PlayerId.P2)
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, PlaceCoralAction("grooved_brain_coral", (2, 1, 1)))
 
@@ -49,6 +55,7 @@ def test_fox_coral_blocks_opponent_from_adjacent_cell(initial_state):
 # ---------------- Sun Coral ----------------
 
 def test_sun_coral_requires_dark_overhang_and_scores_five(initial_state):
+    _give(initial_state, "sun_coral")
     _soil(initial_state, (0, 0, 0), "dark_overhang")
     s = apply_action(initial_state, PlaceCoralAction("sun_coral", (0, 0, 0)))
     p1 = s.players[PlayerId.P1]
@@ -58,6 +65,7 @@ def test_sun_coral_requires_dark_overhang_and_scores_five(initial_state):
 
 
 def test_sun_coral_rejected_on_wrong_soil(initial_state):
+    _give(initial_state, "sun_coral")
     _soil(initial_state, (0, 0, 0), "sandy_bed")
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, PlaceCoralAction("sun_coral", (0, 0, 0)))
@@ -78,6 +86,7 @@ def test_gorgonian_scores_two_per_fan_in_column(initial_state):
 # ---------------- Branched Finger Coral ----------------
 
 def test_branched_finger_refunds_sun_on_rocky_reef(initial_state):
+    _give(initial_state, "branched_finger_coral")
     _soil(initial_state, (0, 0, 0), "rocky_reef")
     sun_before = initial_state.players[PlayerId.P1].resources[ResourceType.SUN]
     s = apply_action(initial_state, PlaceCoralAction("branched_finger_coral", (0, 0, 0)))
@@ -88,6 +97,7 @@ def test_branched_finger_refunds_sun_on_rocky_reef(initial_state):
 
 
 def test_branched_finger_no_refund_on_other_soil(initial_state):
+    _give(initial_state, "branched_finger_coral")
     _soil(initial_state, (0, 0, 0), "sandy_bed")
     sun_before = initial_state.players[PlayerId.P1].resources[ResourceType.SUN]
     s = apply_action(initial_state, PlaceCoralAction("branched_finger_coral", (0, 0, 0)))

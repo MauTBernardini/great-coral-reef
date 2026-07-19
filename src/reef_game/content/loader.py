@@ -3,7 +3,7 @@ from pathlib import Path
 import yaml
 
 from ..engine.enums import CoralTrait, ResourceType
-from ..engine.models import CoralDefinition, Cost, FloraDefinition, SoilDefinition
+from ..engine.models import CoralDefinition, Cost, SoilDefinition
 
 
 def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
@@ -25,6 +25,7 @@ def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
             blocks_opponent_adjacent=item.get("blocks_opponent_adjacent", False),
             refund_soil=item.get("refund_soil"),
             refund_sun=item.get("refund_sun", 0),
+            deck_count=item.get("deck_count", 0),
         )
         result[coral.coral_id] = coral
 
@@ -45,21 +46,6 @@ def load_soils(path: str | Path) -> dict[str, SoilDefinition]:
             supply=item.get("supply", 0),
         )
         result[soil.soil_id] = soil
-
-    return result
-
-
-def load_flora(path: str | Path) -> dict[str, FloraDefinition]:
-    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    result = {}
-
-    for item in data["flora"]:
-        flora = FloraDefinition(
-            flora_id=item["flora_id"],
-            name=item["name"],
-            count=item.get("count", 0),
-        )
-        result[flora.flora_id] = flora
 
     return result
 

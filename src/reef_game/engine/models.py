@@ -7,8 +7,10 @@ from .enums import CoralTrait, PlayerId, ResourceType
 
 Coord3D = Tuple[int, int, int]
 
-# Número máximo de cartas na mão de um jogador.
+# Número máximo de cartas de coral na mão de um jogador.
 MAX_HAND_SIZE = 10
+# Cartas de coral distribuídas a cada jogador no início.
+STARTING_HAND_SIZE = 5
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,8 @@ class CoralDefinition:
     # Rebate: se construído numa coluna com este solo, devolve refund_sun Sol (Branched Finger).
     refund_soil: Optional[str] = None
     refund_sun: int = 0
+    # Quantas cópias deste coral existem no baralho fechado (disponibilidade).
+    deck_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -48,14 +52,6 @@ class SoilDefinition:
     coral_cost_reduction: int = 0
     # Quantidade disponível no suprimento compartilhado.
     supply: int = 0
-
-
-@dataclass(frozen=True)
-class FloraDefinition:
-    flora_id: str
-    name: str
-    # Quantas cópias existem no deck de flora.
-    count: int = 0
 
 
 @dataclass(frozen=True)
@@ -140,6 +136,5 @@ class GameState:
     available_soils: Dict[str, SoilDefinition] = field(default_factory=dict)
     # Pilha de compra de solos: fila embaralhada de soil_ids; compra-se do topo (índice 0).
     soil_pile: List[str] = field(default_factory=list)
-    available_flora: Dict[str, FloraDefinition] = field(default_factory=dict)
-    # Deck de flora (cartas fechadas): fila embaralhada de flora_ids.
-    flora_deck: List[str] = field(default_factory=list)
+    # Baralho fechado de corais: fila embaralhada de coral_ids; compra-se do topo (índice 0).
+    coral_deck: List[str] = field(default_factory=list)

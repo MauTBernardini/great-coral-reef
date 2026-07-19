@@ -1,5 +1,5 @@
 from .actions import (
-    BuyFloraAction,
+    BuyCoralsAction,
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
@@ -37,8 +37,8 @@ def validate_action(state, action) -> None:
         _validate_place_soil(state, action)
         return
 
-    if action.action_type == ActionType.BUY_FLORA:
-        _validate_buy_flora(state, action)
+    if action.action_type == ActionType.BUY_CORALS:
+        _validate_buy_corals(state, action)
         return
 
     raise InvalidActionError(f"Unsupported action type: {action.action_type}")
@@ -62,31 +62,34 @@ def _validate_place_soil(state, action: PlaceSoilAction) -> None:
         raise InvalidActionError("Cell already has a soil tile.")
 
 
-def _validate_buy_flora(state, action: BuyFloraAction) -> None:
+def _validate_buy_corals(state, action: BuyCoralsAction) -> None:
     player = state.players[state.active_player]
 
-    if not state.flora_deck:
-        raise InvalidActionError("Flora deck is empty.")
+    if not state.coral_deck:
+        raise InvalidActionError("Coral deck is empty.")
 
     if len(player.hand) >= MAX_HAND_SIZE:
         raise InvalidActionError("Hand is full (max 10 cards).")
 
 
 def _validate_place_coral(
-    state, action: PlaceCoralAction, pending=None, check_resources=True
+    state, action: PlaceCoralAction, pending=None, check_resources=True, check_hand=True
 ) -> None:
     """Validate a single placement.
 
     ``pending`` maps positions to coral_ids that should be treated as already
     occupied (used so the second staghorn of a pair can be supported by / must
-    not overlap the first). ``check_resources`` can be disabled when affordability
-    is checked jointly for a multi-placement action.
+    not overlap the first). ``check_resources``/``check_hand`` can be disabled when
+    affordability / cartas na mão são checadas em conjunto num multi-placement.
     """
     pending = pending or {}
     player = state.players[state.active_player]
 
     if action.coral_id not in state.available_corals:
         raise InvalidActionError("Unknown coral_id.")
+
+    if check_hand and action.coral_id not in player.hand:
+        raise InvalidActionError(f"Coral card {action.coral_id} is not in hand.")
 
     coral = state.available_corals[action.coral_id]
     x, y, z = action.position
@@ -148,17 +151,22 @@ def _validate_staghorn_pair(state, action: PlaceStaghornPairAction) -> None:
 
     player = state.players[state.active_player]
 
+    # Precisa de 2 cartas de staghorn na mão (uma por peça).
+    if player.hand.count(STAGHORN_ID) < 2:
+        raise InvalidActionError("Need 2 staghorn cards in hand for the pair.")
+
     first = PlaceCoralAction(STAGHORN_ID, action.first_position)
     second = PlaceCoralAction(STAGHORN_ID, action.second_position)
 
-    # Structural checks (bounds/layer/support/occupancy) with resources deferred to
-    # the joint affordability check below. The second staghorn may lean on the first.
-    _validate_place_coral(state, first, check_resources=False)
+    # Structural checks (bounds/layer/support/occupancy) with resources/hand deferred
+    # to the joint checks. The second staghorn may lean on the first.
+    _validate_place_coral(state, first, check_resources=False, check_hand=False)
     _validate_place_coral(
         state,
         second,
         pending={action.first_position: STAGHORN_ID},
         check_resources=False,
+        check_hand=False,
     )
 
     coral = state.available_corals[STAGHORN_ID]
