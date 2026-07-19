@@ -61,6 +61,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
     coral_ids = sorted(corals.keys())
     soil_ids = sorted(soils.keys())
+    fauna_ids = sorted(fauna.keys())
     seat_rng = random.Random(config.seed_start) if config.randomize_seats else None
 
     rows = []
@@ -136,7 +137,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
                 "coral_deck_remaining": summary["coral_deck_remaining"],
                 "terminal": final_state.is_terminal,
         }
-        # Volume por tipo de coral e de solo, por jogador (para análise volume x score).
+        # Volume por tipo de coral, solo e fauna, por jogador (para análise volume x score).
         for pid in (1, 2):
             corals_by_type = summary["corals_by_type"][pid]
             for coral_id in coral_ids:
@@ -144,6 +145,12 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             soils_by_type = summary["soils_by_type"][pid]
             for soil_id in soil_ids:
                 row[f"p{pid}_soil_{soil_id}"] = soils_by_type.get(soil_id, 0)
+            fauna_by_type = summary["fauna_by_type"][pid]
+            for fauna_id in fauna_ids:
+                row[f"p{pid}_fauna_{fauna_id}"] = fauna_by_type.get(fauna_id, 0)
+            row[f"p{pid}_fauna_total"] = sum(fauna_by_type.values())
+            row[f"p{pid}_habitat"] = summary["habitat_capacity"][pid]
+            row[f"p{pid}_produced_o2"] = summary["produced_resources"][pid].get("o2", 0)
         rows.append(row)
 
     df = pd.DataFrame(rows)

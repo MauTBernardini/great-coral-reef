@@ -38,6 +38,27 @@ def _soils_by_type(state):
     return counts
 
 
+def _fauna_by_type(state):
+    counts = {pid.value: {} for pid in state.players}
+    for cell in state.board.cells.values():
+        occupant = cell.occupant
+        if occupant is not None:
+            by_player = counts[occupant.owner.value]
+            for fauna_id in cell.fauna:
+                by_player[fauna_id] = by_player.get(fauna_id, 0) + 1
+    return counts
+
+
+def _habitat_by_player(state):
+    totals = {pid.value: 0 for pid in state.players}
+    for cell in state.board.cells.values():
+        occupant = cell.occupant
+        if occupant is not None:
+            coral = state.available_corals[occupant.coral_id]
+            totals[occupant.owner.value] += coral.habitat_capacity
+    return totals
+
+
 def summarize_game(state, telemetry):
     players = state.players
     soils_on_board = _soils_on_board(state)
@@ -69,6 +90,8 @@ def summarize_game(state, telemetry):
         "soil_purchases_lost": soil_lost,
         "corals_by_type": _corals_by_type(state),
         "soils_by_type": _soils_by_type(state),
+        "fauna_by_type": _fauna_by_type(state),
+        "habitat_capacity": _habitat_by_player(state),
         "soil_pile_remaining": len(state.soil_pile),
         "coral_deck_remaining": len(state.coral_deck),
         "action_history_length": len(state.action_history),
