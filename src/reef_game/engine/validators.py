@@ -7,6 +7,7 @@ from .actions import (
 from .economy import effective_cost
 from .enums import ActionType, ResourceType
 from .models import MAX_HAND_SIZE
+from .scoring import same_layer_neighbors
 from .state import get_cell
 
 STAGHORN_ID = "staghorn"
@@ -110,6 +111,23 @@ def _validate_place_coral(
     base_cell = get_cell(state.board, (x, y, 0))
     if base_cell.soil is None:
         raise InvalidActionError("Coral requires a soil tile at the column base (z=0).")
+
+    if coral.required_soil is not None and base_cell.soil.soil_id != coral.required_soil:
+        raise InvalidActionError(
+            f"Coral {coral.coral_id} can only be built on {coral.required_soil} soil."
+        )
+
+    # Fox Coral: bloqueia construção de oponentes em células vizinhas (mesma camada).
+    for neighbor_pos in same_layer_neighbors(action.position):
+        neighbor = state.board.cells.get(neighbor_pos)
+        if neighbor is None or neighbor.occupant is None:
+            continue
+        occupant = neighbor.occupant
+        if occupant.owner == state.active_player:
+            continue
+        occupant_def = state.available_corals.get(occupant.coral_id)
+        if occupant_def is not None and occupant_def.blocks_opponent_adjacent:
+            raise InvalidActionError("Cell borders an opponent's Fox Coral (blocked).")
 
     if check_resources:
         cost = effective_cost(state, coral, action.position)

@@ -60,6 +60,6 @@ def test_grooved_brain_discounts_coral_directly_above(soiled_state):
     s = apply_action(s, PlaceCoralAction("elkhorn", (0, 0, 1)))  # P1 above brain
 
     p1 = s.players[PlayerId.P1]
-    # Elkhorn normally costs 3 Sun; -1 for sitting on the brain -> 2. 8 - 2 = 6.
-    assert p1.resources[ResourceType.SUN] == 6
+    # Elkhorn costs 2 Sun; -1 for sitting on the brain -> 1. 8 - 1 = 7.
+    assert p1.resources[ResourceType.SUN] == 7
     assert p1.resources[ResourceType.PLANKTON] == 9

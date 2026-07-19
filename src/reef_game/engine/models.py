@@ -28,6 +28,13 @@ class CoralDefinition:
     allowed_layers: Optional[List[int]] = None
     # Base resources this coral yields each Production Phase (empty = none).
     production: Dict[ResourceType, int] = field(default_factory=dict)
+    # Só pode ser construído se o solo da base da coluna for este soil_id (Sun Coral).
+    required_soil: Optional[str] = None
+    # Oponentes não podem construir em células vizinhas (mesma camada) a este coral (Fox Coral).
+    blocks_opponent_adjacent: bool = False
+    # Rebate: se construído numa coluna com este solo, devolve refund_sun Sol (Branched Finger).
+    refund_soil: Optional[str] = None
+    refund_sun: int = 0
 
 
 @dataclass(frozen=True)

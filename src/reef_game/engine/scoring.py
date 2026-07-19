@@ -9,6 +9,11 @@ as the game progresses.
 STAGHORN_ID = "staghorn"
 ELKHORN_ID = "elkhorn"
 GROOVED_BRAIN_ID = "grooved_brain_coral"
+FOX_ID = "fox_coral"
+SUN_CORAL_ID = "sun_coral"
+GORGONIAN_ID = "gorgonian_sea_fan"
+BRANCHED_FINGER_ID = "branched_finger_coral"
+BUBBLE_ID = "bubble_coral"
 
 
 def orthogonal_neighbors_3d(position):
@@ -22,6 +27,45 @@ def orthogonal_neighbors_3d(position):
         (x, y, z + 1),
         (x, y, z - 1),
     ]
+
+
+def same_layer_neighbors(position):
+    """The four cells sharing an edge on the same layer."""
+    x, y, z = position
+    return [(x + 1, y, z), (x - 1, y, z), (x, y + 1, z), (x, y - 1, z)]
+
+
+def _count_empty_same_layer_neighbors(state, position) -> int:
+    count = 0
+    for pos in same_layer_neighbors(position):
+        cell = state.board.cells.get(pos)
+        if cell is not None and cell.occupant is None:
+            count += 1
+    return count
+
+
+def _count_gorgonians_in_column(state, position, owner) -> int:
+    x, y, _ = position
+    count = 0
+    for zz in range(state.board.max_layers):
+        cell = state.board.cells.get((x, y, zz))
+        if (
+            cell is not None
+            and cell.occupant is not None
+            and cell.occupant.coral_id == GORGONIAN_ID
+            and cell.occupant.owner == owner
+        ):
+            count += 1
+    return count
+
+
+def _distinct_same_layer_coral_types(state, position) -> int:
+    types = set()
+    for pos in same_layer_neighbors(position):
+        cell = state.board.cells.get(pos)
+        if cell is not None and cell.occupant is not None:
+            types.add(cell.occupant.coral_id)
+    return len(types)
 
 
 def _count_corals_above(state, position) -> int:
@@ -70,6 +114,24 @@ def score_coral(state, placed_coral) -> int:
     if coral_id == STAGHORN_ID:
         # 1 per directly-connected staghorn of the same owner, counting itself.
         return 1 + _count_connected_staghorns(state, placed_coral.position, placed_coral.owner)
+
+    if coral_id == FOX_ID:
+        # 2 pontos por tile vizinho (mesma camada) vazio.
+        return 2 * _count_empty_same_layer_neighbors(state, placed_coral.position)
+
+    if coral_id == SUN_CORAL_ID:
+        return 5
+
+    if coral_id == GORGONIAN_ID:
+        # 2 por Gorgonian (mesmo dono) na coluna vertical (conta a si mesmo quando no board).
+        return 2 * _count_gorgonians_in_column(state, placed_coral.position, placed_coral.owner)
+
+    if coral_id == BRANCHED_FINGER_ID:
+        return 1
+
+    if coral_id == BUBBLE_ID:
+        # 2 se adjacente (mesma camada) a pelo menos 2 tipos diferentes de coral.
+        return 2 if _distinct_same_layer_coral_types(state, placed_coral.position) >= 2 else 0
 
     # Fallback for any future coral without a bespoke rule.
     coral = state.available_corals[coral_id]

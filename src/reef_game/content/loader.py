@@ -21,6 +21,10 @@ def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
             requires_support=item.get("requires_support", True),
             allowed_layers=item.get("allowed_layers"),
             production={ResourceType(k): v for k, v in item.get("production", {}).items()},
+            required_soil=item.get("required_soil"),
+            blocks_opponent_adjacent=item.get("blocks_opponent_adjacent", False),
+            refund_soil=item.get("refund_soil"),
+            refund_sun=item.get("refund_sun", 0),
         )
         result[coral.coral_id] = coral
 

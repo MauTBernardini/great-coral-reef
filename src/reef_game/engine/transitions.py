@@ -144,6 +144,17 @@ def _place_coral_on_board(state, coral_id, position) -> str:
         player.resources[resource] -= amount
         player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
 
+    # Rebate (Branched Finger): devolve Sol se a base da coluna for o solo indicado.
+    if coral.refund_soil is not None and coral.refund_sun:
+        base = state.board.cells.get((px, py, 0))
+        if base is not None and base.soil is not None and base.soil.soil_id == coral.refund_soil:
+            player.resources[ResourceType.SUN] = (
+                player.resources.get(ResourceType.SUN, 0) + coral.refund_sun
+            )
+            player.produced_resources[ResourceType.SUN] = (
+                player.produced_resources.get(ResourceType.SUN, 0) + coral.refund_sun
+            )
+
     player.placed_corals += 1
     return instance_id
 
