@@ -94,6 +94,18 @@ def build_coral_deck(
     return deck
 
 
+def deal_instinct_options(seed: int, instinct_definitions: dict) -> dict:
+    """Embaralha o baralho de Instinto e distribui 2 opções distintas a cada jogador."""
+    deck = list(instinct_definitions.keys())
+    if not deck:
+        return {PlayerId.P1: [], PlayerId.P2: []}
+    Random(seed + 303).shuffle(deck)
+    per_player = min(2, len(deck) // 2) if len(deck) >= 2 else len(deck)
+    p1 = deck[:per_player]
+    p2 = deck[per_player:2 * per_player]
+    return {PlayerId.P1: p1, PlayerId.P2: p2}
+
+
 def create_initial_state(
     seed: int,
     coral_definitions: dict,
@@ -101,13 +113,16 @@ def create_initial_state(
     climate_config: dict | None = None,
     soil_definitions: dict | None = None,
     fauna_definitions: dict | None = None,
+    instinct_definitions: dict | None = None,
 ) -> GameState:
     balance_rules = balance_rules or _default_balance_rules()
     climate_config = climate_config or {"deck": []}
     soil_definitions = soil_definitions or {}
     fauna_definitions = fauna_definitions or {}
+    instinct_definitions = instinct_definitions or {}
     soil_pile = build_soil_pile(seed, soil_definitions)
     coral_deck = build_coral_deck(seed, coral_definitions, fauna_definitions)
+    instinct_options = deal_instinct_options(seed, instinct_definitions)
 
     board_cfg = balance_rules["board"]
     resource_cfg = balance_rules["players"]["initial_resources"]
@@ -145,6 +160,7 @@ def create_initial_state(
             hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
+            instinct_options=instinct_options[PlayerId.P1],
         ),
         PlayerId.P2: PlayerState(
             player_id=PlayerId.P2,
@@ -152,6 +168,7 @@ def create_initial_state(
             hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
+            instinct_options=instinct_options[PlayerId.P2],
         ),
     }
 
@@ -176,4 +193,5 @@ def create_initial_state(
         soil_pile=soil_pile,
         coral_deck=coral_deck,
         available_fauna=fauna_definitions,
+        available_instincts=instinct_definitions,
     )

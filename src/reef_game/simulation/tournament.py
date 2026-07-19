@@ -14,7 +14,13 @@ except ImportError:
 from ..agents.greedy_agent import GreedyAgent
 from ..agents.long_term_agent import LongTermAgent
 from ..agents.random_agent import RandomAgent
-from ..content.loader import load_corals, load_fauna, load_soils, load_yaml_config
+from ..content.loader import (
+    load_corals,
+    load_fauna,
+    load_instincts,
+    load_soils,
+    load_yaml_config,
+)
 from ..engine.enums import PlayerId
 from ..engine.setup import create_initial_state, load_balance_rules, load_climate_config
 from .runner import run_game
@@ -26,6 +32,7 @@ class TournamentConfig:
     corals_path: str = "configs/corals.yaml"
     soils_path: str = "configs/soils.yaml"
     fauna_path: str = "configs/fauna.yaml"
+    instincts_path: str = "configs/instincts.yaml"
     balance_rules_path: str = "configs/balance_rules.yaml"
     climate_path: str = "configs/climate.yaml"
     version_path: str = "configs/version.yaml"
@@ -55,6 +62,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     corals = load_corals(config.corals_path)
     soils = load_soils(config.soils_path)
     fauna = load_fauna(config.fauna_path)
+    instincts = load_instincts(config.instincts_path)
     balance_rules = load_balance_rules(config.balance_rules_path)
     climate_config = load_climate_config(config.climate_path)
     version_config = load_yaml_config(config.version_path)
@@ -81,6 +89,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             climate_config=climate_config,
             soil_definitions=soils,
             fauna_definitions=fauna,
+            instinct_definitions=instincts,
         )
         # Atribuição de agente a cada cadeira (opcionalmente trocada por seed).
         p1_agent, p2_agent = config.agent_p1, config.agent_p2
@@ -151,6 +160,8 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             row[f"p{pid}_fauna_total"] = sum(fauna_by_type.values())
             row[f"p{pid}_habitat"] = summary["habitat_capacity"][pid]
             row[f"p{pid}_produced_o2"] = summary["produced_resources"][pid].get("o2", 0)
+            row[f"p{pid}_instinct"] = summary["instinct_card"][pid]
+            row[f"p{pid}_instinct_points"] = summary["instinct_points"][pid]
         rows.append(row)
 
     df = pd.DataFrame(rows)
@@ -170,7 +181,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
 
 def _play_scored_game(content, seed, p1_name, p2_name, max_rounds):
-    corals, soils, fauna, balance_rules, climate_config = content
+    corals, soils, fauna, balance_rules, climate_config, instincts = content
     state = create_initial_state(
         seed=seed,
         coral_definitions=corals,
@@ -178,6 +189,7 @@ def _play_scored_game(content, seed, p1_name, p2_name, max_rounds):
         climate_config=climate_config,
         soil_definitions=soils,
         fauna_definitions=fauna,
+        instinct_definitions=instincts,
     )
     agents = {
         PlayerId.P1: AGENT_FACTORY[p1_name](seed),
@@ -196,6 +208,7 @@ def run_paired_tournament(config: TournamentConfig) -> pd.DataFrame:
         load_fauna(config.fauna_path),
         load_balance_rules(config.balance_rules_path),
         load_climate_config(config.climate_path),
+        load_instincts(config.instincts_path),
     )
     version_config = load_yaml_config(config.version_path)
     agent_a, agent_b = config.agent_p1, config.agent_p2

@@ -67,6 +67,26 @@ class PlayFaunaAction(Action):
 
 
 @dataclass(frozen=True)
+class MoveFaunaAction(Action):
+    """Mover uma fauna móvel (Moon Jelly) de um coral seu para um coral vizinho seu.
+
+    Destino deve ser vizinho ortogonal (mesma camada ou diretamente acima/abaixo) e
+    conter um coral do jogador com capacidade habitacional livre. Sem custo de recurso;
+    permitido no máx. 1x por rodada.
+    """
+
+    fauna_id: str
+    from_position: Tuple[int, int, int]
+    to_position: Tuple[int, int, int]
+
+    def __init__(self, fauna_id, from_position, to_position):
+        object.__setattr__(self, "action_type", ActionType.MOVE_FAUNA)
+        object.__setattr__(self, "fauna_id", fauna_id)
+        object.__setattr__(self, "from_position", from_position)
+        object.__setattr__(self, "to_position", to_position)
+
+
+@dataclass(frozen=True)
 class BuyCoralsAction(Action):
     """Comprar 2 cartas de coral fechadas (sacar do baralho para a mão, teto de 10)."""
 

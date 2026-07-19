@@ -12,6 +12,7 @@ from .scoring import (
     fauna_habitat_cost,
     has_patrol_neighbor,
     occupied_habitat,
+    orthogonal_neighbors_3d,
     player_small_fish,
     same_layer_neighbors,
 )
@@ -46,6 +47,10 @@ def validate_action(state, action) -> None:
 
     if action.action_type == ActionType.PLAY_FAUNA:
         _validate_play_fauna(state, action)
+        return
+
+    if action.action_type == ActionType.MOVE_FAUNA:
+        _validate_move_fauna(state, action)
         return
 
     if action.action_type == ActionType.BUY_CORALS:
@@ -105,6 +110,61 @@ def _validate_play_fauna(state, action: PlayFaunaAction) -> None:
     for resource, amount in fauna.cost.values.items():
         if player.resources.get(resource, 0) < amount:
             raise InvalidActionError(f"Insufficient resource: {resource.value}")
+
+
+def _validate_move_fauna(state, action) -> None:
+    player = state.players[state.active_player]
+
+    if player.moved_fauna_this_round:
+        raise InvalidActionError("Already moved a fauna this round (max 1/round).")
+
+    if action.fauna_id not in state.available_fauna:
+        raise InvalidActionError("Unknown fauna_id.")
+    fauna = state.available_fauna[action.fauna_id]
+    if not fauna.can_move:
+        raise InvalidActionError(f"Fauna {action.fauna_id} cannot move.")
+
+    if action.to_position == action.from_position:
+        raise InvalidActionError("Move destination must differ from origin.")
+    if action.to_position not in orthogonal_neighbors_3d(action.from_position):
+        raise InvalidActionError("Move must be to an orthogonally adjacent cell.")
+
+    tx, ty, tz = action.to_position
+    in_bounds = (
+        0 <= tx < state.board.width
+        and 0 <= ty < state.board.height
+        and 0 <= tz < state.board.max_layers
+    )
+    if not in_bounds:
+        raise InvalidActionError("Position out of bounds.")
+
+    from_cell = get_cell(state.board, action.from_position)
+    if from_cell.occupant is None or from_cell.occupant.owner != state.active_player:
+        raise InvalidActionError("Origin must be your own coral.")
+    if action.fauna_id not in from_cell.fauna:
+        raise InvalidActionError(f"No {action.fauna_id} to move at origin.")
+
+    to_cell = get_cell(state.board, action.to_position)
+    coral = to_cell.occupant
+    if coral is None:
+        raise InvalidActionError("Fauna must move onto a coral.")
+    if coral.owner != state.active_player:
+        raise InvalidActionError("Fauna must move onto your own coral.")
+
+    if fauna.allowed_layers is not None and tz not in fauna.allowed_layers:
+        raise InvalidActionError(f"Fauna {action.fauna_id} cannot live on layer {tz}.")
+    if fauna.required_soil is not None:
+        base = get_cell(state.board, (tx, ty, 0))
+        if base.soil is None or base.soil.soil_id != fauna.required_soil:
+            raise InvalidActionError(f"Fauna requires a {fauna.required_soil} column.")
+
+    coral_def = state.available_corals[coral.coral_id]
+    free = coral_def.habitat_capacity - occupied_habitat(state, to_cell)
+    if free < fauna_habitat_cost(state, action.fauna_id, coral.coral_id):
+        raise InvalidActionError("Not enough habitat capacity on the destination coral.")
+
+    if not fauna.predator_immune and has_patrol_neighbor(state, action.to_position):
+        raise InvalidActionError("Blocked by an adjacent patrolling predator.")
 
 
 def _validate_place_soil(state, action: PlaceSoilAction) -> None:

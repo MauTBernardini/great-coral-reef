@@ -1,10 +1,10 @@
 import pytest
 
-from reef_game.engine.actions import BuyCoralsAction, PlayFaunaAction
+from reef_game.engine.actions import BuyCoralsAction, MoveFaunaAction, PlayFaunaAction
 from reef_game.engine.enums import PlayerId, ResourceType
 from reef_game.engine.models import PlacedCoral, PlacedSoil
 from reef_game.engine.production import resolve_production
-from reef_game.engine.scoring import occupied_habitat, score_fauna
+from reef_game.engine.scoring import occupied_habitat, recompute_scores, score_fauna
 from reef_game.engine.transitions import apply_action
 from reef_game.engine.validators import InvalidActionError, validate_action
 
@@ -193,6 +193,99 @@ def test_moon_jelly_does_not_occupy_habitat(initial_state):
 
     assert "moon_jelly" in s.board.cells[(0, 0, 0)].fauna
     assert occupied_habitat(s, s.board.cells[(0, 0, 0)]) == 1  # só o damselfish ocupa
+
+
+def test_moon_jelly_play_registers_visited_tile(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _give(initial_state, "moon_jelly")
+
+    s = apply_action(initial_state, PlayFaunaAction("moon_jelly", (0, 0, 0)))
+
+    assert s.players[PlayerId.P1].moon_jelly_visited == {(0, 0, 0)}
+    # staghorn(1) + moon_jelly (1 tile visitado) = 2
+    assert s.players[PlayerId.P1].score == 2
+
+
+def test_moon_jelly_moves_and_scores_new_tile(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _coral(initial_state, "staghorn", (1, 0, 0))
+    initial_state.board.cells[(0, 0, 0)].fauna = ["moon_jelly"]
+    initial_state.players[PlayerId.P1].moon_jelly_visited = {(0, 0, 0)}
+    recompute_scores(initial_state)
+    before = initial_state.players[PlayerId.P1].score
+
+    s = apply_action(initial_state, MoveFaunaAction("moon_jelly", (0, 0, 0), (1, 0, 0)))
+
+    assert "moon_jelly" not in s.board.cells[(0, 0, 0)].fauna
+    assert "moon_jelly" in s.board.cells[(1, 0, 0)].fauna
+    assert s.players[PlayerId.P1].moon_jelly_visited == {(0, 0, 0), (1, 0, 0)}
+    assert s.players[PlayerId.P1].moved_fauna_this_round is True
+    assert s.players[PlayerId.P1].score == before + 1  # +1 tile inédito
+
+
+def test_moon_jelly_revisit_gives_no_extra_point(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _coral(initial_state, "staghorn", (1, 0, 0))
+    initial_state.board.cells[(1, 0, 0)].fauna = ["moon_jelly"]
+    initial_state.players[PlayerId.P1].moon_jelly_visited = {(0, 0, 0), (1, 0, 0)}
+    recompute_scores(initial_state)
+    before = initial_state.players[PlayerId.P1].score
+
+    s = apply_action(initial_state, MoveFaunaAction("moon_jelly", (1, 0, 0), (0, 0, 0)))
+
+    assert s.players[PlayerId.P1].moon_jelly_visited == {(0, 0, 0), (1, 0, 0)}
+    assert s.players[PlayerId.P1].score == before  # tile já visitado
+
+
+def test_moon_jelly_visited_score_is_capped(initial_state):
+    # Com muitos tiles visitados, a pontuação por exploração satura no teto do config.
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    initial_state.board.cells[(0, 0, 0)].fauna = ["moon_jelly"]
+    cap = initial_state.available_fauna["moon_jelly"].visited_score_cap
+    assert cap > 0  # config define um teto
+    initial_state.players[PlayerId.P1].moon_jelly_visited = {
+        (x, 0, 0) for x in range(cap + 3)  # bem acima do teto
+    }
+    recompute_scores(initial_state)
+
+    # staghorn(1) + moon_jelly limitado ao teto
+    assert initial_state.players[PlayerId.P1].score == 1 + cap
+
+
+def test_moon_jelly_move_only_once_per_round(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _coral(initial_state, "staghorn", (1, 0, 0))
+    initial_state.board.cells[(1, 0, 0)].fauna = ["moon_jelly"]
+    initial_state.players[PlayerId.P1].moved_fauna_this_round = True
+
+    with pytest.raises(InvalidActionError):
+        validate_action(initial_state, MoveFaunaAction("moon_jelly", (1, 0, 0), (0, 0, 0)))
+
+
+def test_moon_jelly_move_requires_adjacency(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _coral(initial_state, "staghorn", (3, 3, 0))
+    initial_state.board.cells[(0, 0, 0)].fauna = ["moon_jelly"]
+
+    with pytest.raises(InvalidActionError):
+        validate_action(initial_state, MoveFaunaAction("moon_jelly", (0, 0, 0), (3, 3, 0)))
+
+
+def test_moon_jelly_move_needs_own_coral_destination(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))  # (1,0,0) fica vazio
+    initial_state.board.cells[(0, 0, 0)].fauna = ["moon_jelly"]
+
+    with pytest.raises(InvalidActionError):
+        validate_action(initial_state, MoveFaunaAction("moon_jelly", (0, 0, 0), (1, 0, 0)))
+
+
+def test_non_movable_fauna_cannot_move(initial_state):
+    _coral(initial_state, "staghorn", (0, 0, 0))
+    _coral(initial_state, "staghorn", (1, 0, 0))
+    initial_state.board.cells[(0, 0, 0)].fauna = ["damselfish"]
+
+    with pytest.raises(InvalidActionError):
+        validate_action(initial_state, MoveFaunaAction("damselfish", (0, 0, 0), (1, 0, 0)))
 
 
 # ---------------- Anthias ----------------

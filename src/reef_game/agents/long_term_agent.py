@@ -116,6 +116,14 @@ class LongTermAgent(BaseAgent):
             cost = sum(fauna.cost.values.values())
             return points - W_COST * cost
 
+        if action.action_type == ActionType.MOVE_FAUNA:
+            # Mover só compensa para um tile inédito e enquanto abaixo do teto.
+            visited = state.players[owner].moon_jelly_visited
+            cap = state.available_fauna[action.fauna_id].visited_score_cap
+            fresh = action.to_position not in visited
+            below_cap = cap <= 0 or len(visited) < cap
+            return 1.0 if (fresh and below_cap) else -0.2
+
         if action.action_type == ActionType.PLACE_STAGHORN_PAIR:
             coral = state.available_corals[STAGHORN_ID]
             first, second = action.first_position, action.second_position

@@ -1,5 +1,6 @@
 import statistics
 
+from ..engine.scoring import score_instinct
 from ..engine.state import board_capacity, occupied_cells_count
 
 
@@ -95,6 +96,8 @@ def summarize_game(state, telemetry):
         "soil_pile_remaining": len(state.soil_pile),
         "coral_deck_remaining": len(state.coral_deck),
         "action_history_length": len(state.action_history),
+        "instinct_card": {pid.value: p.instinct_card for pid, p in players.items()},
+        "instinct_points": {pid.value: score_instinct(state, pid) for pid in players},
     }
 
     for pid, p in players.items():

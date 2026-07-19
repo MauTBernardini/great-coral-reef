@@ -55,6 +55,14 @@ class GreedyAgent(BaseAgent):
             cost = sum(fauna.cost.values.values())
             return points - 0.15 * cost
 
+        if action.action_type == ActionType.MOVE_FAUNA:
+            # Só vale mover para um tile inédito e enquanto abaixo do teto de pontuação.
+            visited = state.players[owner].moon_jelly_visited
+            cap = state.available_fauna[action.fauna_id].visited_score_cap
+            fresh = action.to_position not in visited
+            below_cap = cap <= 0 or len(visited) < cap
+            return 1.0 if (fresh and below_cap) else -0.2
+
         if action.action_type == ActionType.PLACE_STAGHORN_PAIR:
             coral = state.available_corals[STAGHORN_ID]
             points = 0

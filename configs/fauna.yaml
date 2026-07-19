@@ -112,7 +112,10 @@ fauna:
     # Não ocupa capacidade habitacional.
     habitat_cost: 0
     is_small_fish: true
-    # (Simplificado: movimento/rastreio de tiles visitados fica para depois; pontua 1.)
+    # Deriva pelo recife: pode ser movida 1x/rodada para um coral seu vizinho.
+    # Pontua 1 por tile distinto já visitado (recompensa a exploração), até o teto.
+    can_move: true
+    visited_score_cap: 4
 
   - fauna_id: anthias
     name: Anthias

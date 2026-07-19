@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from .enums import CoralTrait, PlayerId, ResourceType
 
@@ -85,6 +85,21 @@ class FaunaDefinition:
     patrol: bool = False
     # Ao ser jogada, sacrifica N peixes pequenos do seu board como custo (Blacktip: 1).
     sacrifice_small_fish: int = 0
+    # Pode ser movida entre corais numa ação (Moon Jelly). Move 1x/rodada.
+    can_move: bool = False
+    # Teto de tiles visitados que pontuam (Moon Jelly). 0 = sem limite.
+    visited_score_cap: int = 0
+
+
+@dataclass(frozen=True)
+class InstinctDefinition:
+    """Carta de Instinto: objetivo secreto que pontua ao final do jogo."""
+
+    instinct_id: str
+    name: str
+    points: int
+    # Chave da regra de pontuação, despachada em engine/scoring.py (score_instinct).
+    rule: str
 
 
 @dataclass(frozen=True)
@@ -139,6 +154,13 @@ class PlayerState:
     passed_this_round: bool = False
     # Já comprou do baralho de corais nesta rodada (máx. 1x/rodada).
     bought_corals_this_round: bool = False
+    # Já moveu uma fauna nesta rodada (máx. 1x/rodada, ex.: Moon Jelly).
+    moved_fauna_this_round: bool = False
+    # Tiles (posições 3D) já visitados por Moon Jellies deste jogador — pontuam por exploração.
+    moon_jelly_visited: Set[Coord3D] = field(default_factory=set)
+    # As 2 cartas de Instinto oferecidas no início; e a escolhida (pontua no fim).
+    instinct_options: List[str] = field(default_factory=list)
+    instinct_card: Optional[str] = None
 
 
 @dataclass
@@ -178,3 +200,5 @@ class GameState:
     # Baralho fechado COMPARTILHADO: fila embaralhada de coral_ids E fauna_ids (compra do topo).
     coral_deck: List[str] = field(default_factory=list)
     available_fauna: Dict[str, "FaunaDefinition"] = field(default_factory=dict)
+    # Cartas de Instinto disponíveis no jogo (id -> definição).
+    available_instincts: Dict[str, "InstinctDefinition"] = field(default_factory=dict)

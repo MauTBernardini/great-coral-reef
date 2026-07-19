@@ -1,0 +1,43 @@
+# Cartas de "Instinto": objetivos secretos de fim de jogo.
+# No início da partida cada jogador recebe 2 opções (do baralho embaralhado) e
+# escolhe 1 para si. Ao final, a carta escolhida adiciona pontos conforme sua regra.
+#
+# Campos:
+#   points  -> pontos por unidade contada pela regra
+#   rule    -> chave despachada em engine/scoring.py (score_instinct)
+instincts:
+  - instinct_id: vertical_architect
+    name: Vertical Architect
+    points: 3
+    rule: towers_reaching_surface
+    # 3 pontos por torre de corais sua que atinge a camada mais de superfície.
+
+  - instinct_id: dominance_of_species
+    name: Dominance of Species
+    points: 1
+    rule: dominant_coral_type
+    # 1 ponto por tile ocupado por um coral do seu tipo dominante (o mais numeroso).
+
+  - instinct_id: total_symbiosis
+    name: Total Symbiosis
+    points: 3
+    rule: symbiosis_pairs
+    # 3 pontos por par coral<->fauna ativado (cada fauna morando num coral seu).
+
+  - instinct_id: outer_wall
+    name: Outer Wall
+    points: 2
+    rule: corals_on_edge
+    # 2 pontos por coral seu numa coluna da borda do tabuleiro.
+
+  - instinct_id: tunnel_engineer
+    name: Tunnel Engineer
+    points: 3
+    rule: bottom_layer_connected_quads
+    # 3 pontos por grupo de 4 corais seus conectados na camada do fundo (z=0).
+
+  - instinct_id: overcrowded_nursery
+    name: Overcrowded Nursery
+    points: 3
+    rule: full_habitat_corals
+    # 3 pontos por coral seu 100% cheio (capacidade habitacional totalmente ocupada).

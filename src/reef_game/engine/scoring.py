@@ -156,6 +156,7 @@ SHARK_ID = "blacktip_reef_shark"
 ANTHIAS_ID = "anthias"
 GREEN_CHROMIS_ID = "green_chromis"
 SEA_CUCUMBER_ID = "sea_cucumber"
+MOON_JELLY_ID = "moon_jelly"
 SANDY_BED_ID = "sandy_bed"
 SEAGRASS_ID = "seagrass_meadow"
 
@@ -256,14 +257,131 @@ def score_fauna(state, fauna_id, position, owner) -> int:
     return state.available_fauna[fauna_id].base_points
 
 
+def _owned_coral_cells(state, owner):
+    return [
+        cell for cell in state.board.cells.values()
+        if cell.occupant is not None and cell.occupant.owner == owner
+    ]
+
+
+def _instinct_towers_reaching_surface(state, owner) -> int:
+    """Torres (colunas) do jogador cujo topo alcança a camada mais de superfície."""
+    top = state.board.max_layers - 1
+    count = 0
+    for x in range(state.board.width):
+        for y in range(state.board.height):
+            cell = state.board.cells.get((x, y, top))
+            if cell is not None and cell.occupant is not None and cell.occupant.owner == owner:
+                count += 1
+    return count
+
+
+def _instinct_dominant_coral_type(state, owner) -> int:
+    """Nº de tiles do tipo de coral mais numeroso do jogador (sua 'espécie dominante')."""
+    counts = {}
+    for cell in _owned_coral_cells(state, owner):
+        cid = cell.occupant.coral_id
+        counts[cid] = counts.get(cid, 0) + 1
+    return max(counts.values()) if counts else 0
+
+
+def _instinct_symbiosis_pairs(state, owner) -> int:
+    """Pares coral<->fauna ativados: cada fauna morando num coral do jogador."""
+    return sum(len(cell.fauna) for cell in _owned_coral_cells(state, owner))
+
+
+def _instinct_corals_on_edge(state, owner) -> int:
+    """Corais do jogador em colunas da borda do tabuleiro (qualquer camada)."""
+    w, h = state.board.width, state.board.height
+    count = 0
+    for cell in _owned_coral_cells(state, owner):
+        x, y, _ = cell.position
+        if x == 0 or y == 0 or x == w - 1 or y == h - 1:
+            count += 1
+    return count
+
+
+def _instinct_bottom_layer_connected_quads(state, owner) -> int:
+    """Grupos completos de 4 corais do jogador conectados (ortogonal) na camada z=0."""
+    nodes = {
+        (x, y)
+        for (x, y, z), cell in state.board.cells.items()
+        if z == 0 and cell.occupant is not None and cell.occupant.owner == owner
+    }
+    seen = set()
+    quads = 0
+    for start in nodes:
+        if start in seen:
+            continue
+        # BFS na componente conexa.
+        stack = [start]
+        seen.add(start)
+        size = 0
+        while stack:
+            cx, cy = stack.pop()
+            size += 1
+            for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                if (nx, ny) in nodes and (nx, ny) not in seen:
+                    seen.add((nx, ny))
+                    stack.append((nx, ny))
+        quads += size // 4
+    return quads
+
+
+def _instinct_full_habitat_corals(state, owner) -> int:
+    """Corais do jogador com capacidade habitacional 100% ocupada."""
+    count = 0
+    for cell in _owned_coral_cells(state, owner):
+        cap = state.available_corals[cell.occupant.coral_id].habitat_capacity
+        if cap > 0 and occupied_habitat(state, cell) >= cap:
+            count += 1
+    return count
+
+
+_INSTINCT_RULES = {
+    "towers_reaching_surface": _instinct_towers_reaching_surface,
+    "dominant_coral_type": _instinct_dominant_coral_type,
+    "symbiosis_pairs": _instinct_symbiosis_pairs,
+    "corals_on_edge": _instinct_corals_on_edge,
+    "bottom_layer_connected_quads": _instinct_bottom_layer_connected_quads,
+    "full_habitat_corals": _instinct_full_habitat_corals,
+}
+
+
+def score_instinct(state, player_id) -> int:
+    """Pontos da carta de Instinto escolhida pelo jogador (0 se não tiver)."""
+    card_id = state.players[player_id].instinct_card
+    if card_id is None:
+        return 0
+    inst = state.available_instincts.get(card_id)
+    if inst is None:
+        return 0
+    rule = _INSTINCT_RULES.get(inst.rule)
+    if rule is None:
+        return 0
+    return inst.points * rule(state, player_id)
+
+
 def compute_player_score(state, player_id) -> int:
     total = 0
+    has_moon_jelly = False
     for cell in state.board.cells.values():
         occupant = cell.occupant
         if occupant is not None and occupant.owner == player_id:
             total += score_coral(state, occupant)
             for fauna_id in cell.fauna:
+                if fauna_id == MOON_JELLY_ID:
+                    # Moon Jelly pontua por tiles distintos visitados (nível do jogador),
+                    # não por ocorrência — evita dupla contagem com várias jellies.
+                    has_moon_jelly = True
+                    continue
                 total += score_fauna(state, fauna_id, cell.position, player_id)
+    if has_moon_jelly:
+        visited = len(state.players[player_id].moon_jelly_visited)
+        cap = state.available_fauna[MOON_JELLY_ID].visited_score_cap
+        total += min(visited, cap) if cap > 0 else visited
+    # Objetivo de Instinto (pontua conforme o board; realizado no placar final).
+    total += score_instinct(state, player_id)
     return total
 
 

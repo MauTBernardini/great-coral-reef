@@ -2,6 +2,7 @@ from copy import deepcopy
 
 from .actions import (
     BuyCoralsAction,
+    MoveFaunaAction,
     PlaceCoralAction,
     PlaceSoilAction,
     PlaceStaghornPairAction,
@@ -67,6 +68,12 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
+    if action.action_type == ActionType.MOVE_FAUNA:
+        _apply_move_fauna(next_state, action)
+        _advance_turn(next_state)
+        check_game_end(next_state, max_rounds=max_rounds)
+        return next_state
+
     if action.action_type == ActionType.BUY_CORALS:
         _apply_buy_corals(next_state, action)
         _advance_turn(next_state)
@@ -104,6 +111,10 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
     player.hand.remove(action.fauna_id)  # gasta a carta
     cell.fauna.append(action.fauna_id)
 
+    # Fauna móvel (Moon Jelly): registra o tile inicial visitado (pontua por exploração).
+    if fauna.can_move:
+        player.moon_jelly_visited.add(action.position)
+
     for resource, amount in fauna.cost.values.items():
         player.resources[resource] -= amount
         player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
@@ -123,6 +134,36 @@ def _apply_play_fauna(state, action: PlayFaunaAction):
             "result": "play_fauna",
             "fauna_id": action.fauna_id,
             "position": action.position,
+            "points_gained": gained,
+        },
+    )
+
+
+def _apply_move_fauna(state, action: MoveFaunaAction):
+    player = state.players[state.active_player]
+    from_cell = state.board.cells[action.from_position]
+    to_cell = state.board.cells[action.to_position]
+
+    from_cell.fauna.remove(action.fauna_id)
+    to_cell.fauna.append(action.fauna_id)
+    player.moved_fauna_this_round = True
+
+    fauna = state.available_fauna[action.fauna_id]
+    if fauna.can_move:
+        player.moon_jelly_visited.add(action.to_position)
+
+    score_before = player.score
+    recompute_scores(state)
+    gained = player.score - score_before
+    player.passed_last_turn = False
+    _append_history(
+        state,
+        action,
+        {
+            "result": "move_fauna",
+            "fauna_id": action.fauna_id,
+            "from": action.from_position,
+            "to": action.to_position,
             "points_gained": gained,
         },
     )
@@ -306,6 +347,7 @@ def _start_new_round(state):
     for player in state.players.values():
         player.passed_this_round = False
         player.bought_corals_this_round = False
+        player.moved_fauna_this_round = False
     state.active_player = PlayerId.P1
     # Cada rodada inicia com a produção e um evento climático.
     _resolve_production_round(state)

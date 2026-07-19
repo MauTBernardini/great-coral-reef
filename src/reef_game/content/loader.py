@@ -3,7 +3,13 @@ from pathlib import Path
 import yaml
 
 from ..engine.enums import CoralTrait, ResourceType
-from ..engine.models import CoralDefinition, Cost, FaunaDefinition, SoilDefinition
+from ..engine.models import (
+    CoralDefinition,
+    Cost,
+    FaunaDefinition,
+    InstinctDefinition,
+    SoilDefinition,
+)
 
 
 def load_corals(path: str | Path) -> dict[str, CoralDefinition]:
@@ -73,9 +79,25 @@ def load_fauna(path: str | Path) -> dict[str, FaunaDefinition]:
             predator_immune=item.get("predator_immune", False),
             patrol=item.get("patrol", False),
             sacrifice_small_fish=item.get("sacrifice_small_fish", 0),
+            can_move=item.get("can_move", False),
+            visited_score_cap=item.get("visited_score_cap", 0),
         )
         result[fauna.fauna_id] = fauna
 
+    return result
+
+
+def load_instincts(path: str | Path) -> dict[str, InstinctDefinition]:
+    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    result = {}
+    for item in data["instincts"]:
+        inst = InstinctDefinition(
+            instinct_id=item["instinct_id"],
+            name=item["name"],
+            points=item["points"],
+            rule=item["rule"],
+        )
+        result[inst.instinct_id] = inst
     return result
 
 
