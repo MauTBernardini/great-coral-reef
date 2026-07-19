@@ -19,6 +19,7 @@ def main():
             games=20,
             corals_path=str(ROOT / "configs" / "corals.yaml"),
             soils_path=str(ROOT / "configs" / "soils.yaml"),
+            flora_path=str(ROOT / "configs" / "flora.yaml"),
             balance_rules_path=str(ROOT / "configs" / "balance_rules.yaml"),
             climate_path=str(ROOT / "configs" / "climate.yaml"),
             agent_p1="random",

@@ -1,4 +1,5 @@
 from ..engine.actions import (
+    BuyFloraAction,
     PassAction,
     PlaceCoralAction,
     PlaceSoilAction,
@@ -16,16 +17,24 @@ def enumerate_legal_actions(state):
     actions = [PassAction()]
     legal_staghorn_positions = []
 
-    # Solos: só na camada do fundo (z=0), em células ainda sem solo.
-    for soil_id in state.available_soils:
-        for pos, cell in state.board.cells.items():
-            if pos[2] == 0 and cell.soil is None:
-                action = PlaceSoilAction(soil_id=soil_id, position=pos)
-                try:
-                    validate_action(state, action)
-                    actions.append(action)
-                except InvalidActionError:
-                    pass
+    # Comprar 2 cartas de flora (se há deck e espaço na mão).
+    flora = BuyFloraAction()
+    try:
+        validate_action(state, flora)
+        actions.append(flora)
+    except InvalidActionError:
+        pass
+
+    # Comprar+baixar solo (topo da pilha) em qualquer célula vazia do fundo (z=0).
+    # Afordabilidade não filtra aqui: o topo pode ser caro demais (ação perdida).
+    for pos, cell in state.board.cells.items():
+        if pos[2] == 0 and cell.soil is None:
+            action = PlaceSoilAction(position=pos)
+            try:
+                validate_action(state, action)
+                actions.append(action)
+            except InvalidActionError:
+                pass
 
     for coral_id in state.available_corals:
         for pos, cell in state.board.cells.items():

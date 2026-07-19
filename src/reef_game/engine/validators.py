@@ -1,6 +1,12 @@
-from .actions import PlaceCoralAction, PlaceSoilAction, PlaceStaghornPairAction
+from .actions import (
+    BuyFloraAction,
+    PlaceCoralAction,
+    PlaceSoilAction,
+    PlaceStaghornPairAction,
+)
 from .economy import effective_cost
 from .enums import ActionType, ResourceType
+from .models import MAX_HAND_SIZE
 from .state import get_cell
 
 STAGHORN_ID = "staghorn"
@@ -30,14 +36,18 @@ def validate_action(state, action) -> None:
         _validate_place_soil(state, action)
         return
 
+    if action.action_type == ActionType.BUY_FLORA:
+        _validate_buy_flora(state, action)
+        return
+
     raise InvalidActionError(f"Unsupported action type: {action.action_type}")
 
 
 def _validate_place_soil(state, action: PlaceSoilAction) -> None:
-    player = state.players[state.active_player]
-
-    if action.soil_id not in state.available_soils:
-        raise InvalidActionError("Unknown soil_id.")
+    # Afordabilidade NÃO é validada aqui de propósito: se o topo da pilha for caro
+    # demais, a ação é permitida mas perdida (tratada em transitions).
+    if not state.soil_pile:
+        raise InvalidActionError("Soil purchase pile is empty.")
 
     x, y, z = action.position
     if z != 0:
@@ -50,13 +60,15 @@ def _validate_place_soil(state, action: PlaceSoilAction) -> None:
     if cell.soil is not None:
         raise InvalidActionError("Cell already has a soil tile.")
 
-    if state.soil_supply.get(action.soil_id, 0) <= 0:
-        raise InvalidActionError("No soil of this type remaining in supply.")
 
-    soil = state.available_soils[action.soil_id]
-    for resource, cost_value in soil.cost.values.items():
-        if player.resources.get(resource, 0) < cost_value:
-            raise InvalidActionError(f"Insufficient resource: {resource.value}")
+def _validate_buy_flora(state, action: BuyFloraAction) -> None:
+    player = state.players[state.active_player]
+
+    if not state.flora_deck:
+        raise InvalidActionError("Flora deck is empty.")
+
+    if len(player.hand) >= MAX_HAND_SIZE:
+        raise InvalidActionError("Hand is full (max 10 cards).")
 
 
 def _validate_place_coral(

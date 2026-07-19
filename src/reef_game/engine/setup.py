@@ -72,17 +72,36 @@ def build_climate_deck(seed: int, climate_cfg: dict) -> list[ClimateCard]:
     return expanded_deck[:deck_size]
 
 
+def build_soil_pile(seed: int, soil_definitions: dict) -> list[str]:
+    pile = []
+    for soil_id, soil in soil_definitions.items():
+        pile.extend([soil_id] * soil.supply)
+    Random(seed + 101).shuffle(pile)
+    return pile
+
+
+def build_flora_deck(seed: int, flora_definitions: dict) -> list[str]:
+    deck = []
+    for flora_id, flora in flora_definitions.items():
+        deck.extend([flora_id] * flora.count)
+    Random(seed + 202).shuffle(deck)
+    return deck
+
+
 def create_initial_state(
     seed: int,
     coral_definitions: dict,
     balance_rules: dict | None = None,
     climate_config: dict | None = None,
     soil_definitions: dict | None = None,
+    flora_definitions: dict | None = None,
 ) -> GameState:
     balance_rules = balance_rules or _default_balance_rules()
     climate_config = climate_config or {"deck": []}
     soil_definitions = soil_definitions or {}
-    soil_supply = {soil_id: soil.supply for soil_id, soil in soil_definitions.items()}
+    flora_definitions = flora_definitions or {}
+    soil_pile = build_soil_pile(seed, soil_definitions)
+    flora_deck = build_flora_deck(seed, flora_definitions)
 
     board_cfg = balance_rules["board"]
     resource_cfg = balance_rules["players"]["initial_resources"]
@@ -141,5 +160,7 @@ def create_initial_state(
         era_thresholds=era_thresholds,
         climate_deck=build_climate_deck(seed=seed, climate_cfg=climate_deck_cfg),
         available_soils=soil_definitions,
-        soil_supply=soil_supply,
+        soil_pile=soil_pile,
+        available_flora=flora_definitions,
+        flora_deck=flora_deck,
     )

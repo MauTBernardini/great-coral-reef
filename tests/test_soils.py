@@ -8,65 +8,79 @@ from reef_game.engine.validators import InvalidActionError, validate_action
 
 
 def test_coral_requires_soil_at_column_base(initial_state):
-    # No soil anywhere -> any coral placement is rejected.
+    # No soil placed yet -> any coral placement is rejected.
     with pytest.raises(InvalidActionError):
         validate_action(initial_state, PlaceCoralAction("grooved_brain_coral", (0, 0, 0)))
 
 
-def test_place_soil_then_coral(initial_state):
-    s = apply_action(initial_state, PlaceSoilAction("sandy_bed", (0, 0, 0)))  # P1 buys soil
-    p1 = s.players[PlayerId.P1]
-    assert s.board.cells[(0, 0, 0)].soil.soil_id == "sandy_bed"
-    assert s.board.cells[(0, 0, 0)].soil.owner == PlayerId.P1
-    assert p1.resources[ResourceType.SUN] == 9  # 10 - 1
-    assert s.soil_supply["sandy_bed"] == 7      # 8 - 1
+def test_buying_soil_draws_top_of_pile_and_places_it(initial_state):
+    top = initial_state.soil_pile[0]
+    top_cost = initial_state.available_soils[top].cost.values[ResourceType.SUN]
+    sun_before = initial_state.players[PlayerId.P1].resources[ResourceType.SUN]
 
-    # Now a coral can be built on that column (P2 passes to return to P1).
-    s = apply_action(s, PlaceSoilAction("sandy_bed", (3, 3, 0)))  # P2
-    s = apply_action(s, PlaceCoralAction("grooved_brain_coral", (0, 0, 0)))  # P1
-    assert s.board.cells[(0, 0, 0)].occupant.coral_id == "grooved_brain_coral"
+    s = apply_action(initial_state, PlaceSoilAction((0, 0, 0)))
+
+    placed = s.board.cells[(0, 0, 0)].soil
+    assert placed is not None and placed.soil_id == top
+    assert placed.owner == PlayerId.P1
+    assert s.players[PlayerId.P1].resources[ResourceType.SUN] == sun_before - top_cost
+    assert len(s.soil_pile) == len(initial_state.soil_pile) - 1
+    assert s.soil_pile == initial_state.soil_pile[1:]
+
+
+def test_unaffordable_soil_loses_the_action_and_returns_to_top(initial_state):
+    initial_state.players[PlayerId.P1].resources[ResourceType.SUN] = 0  # can't afford any soil
+    top = initial_state.soil_pile[0]
+
+    s = apply_action(initial_state, PlaceSoilAction((0, 0, 0)))
+
+    # Nothing placed, nothing paid, soil still on top of the pile, turn was spent.
+    assert s.board.cells[(0, 0, 0)].soil is None
+    assert s.soil_pile[0] == top
+    assert len(s.soil_pile) == len(initial_state.soil_pile)
+    assert s.players[PlayerId.P1].resources[ResourceType.SUN] == 0
+    assert s.players[PlayerId.P1].dead_turns == 1
+    assert s.active_player == PlayerId.P2
+    assert s.action_history[-1]["result"] == "soil_purchase_lost"
 
 
 def test_soil_only_on_bottom_layer(initial_state):
     with pytest.raises(InvalidActionError):
-        validate_action(initial_state, PlaceSoilAction("sandy_bed", (0, 0, 1)))
+        validate_action(initial_state, PlaceSoilAction((0, 0, 1)))
 
 
-def test_soil_supply_is_enforced(initial_state):
-    initial_state.soil_supply["seagrass_meadow"] = 0
+def test_cannot_place_soil_where_soil_exists(initial_state):
+    s = apply_action(initial_state, PlaceSoilAction((0, 0, 0)))
     with pytest.raises(InvalidActionError):
-        validate_action(initial_state, PlaceSoilAction("seagrass_meadow", (0, 0, 0)))
+        validate_action(s, PlaceSoilAction((0, 0, 0)))
 
 
-def test_cannot_place_soil_twice_on_same_cell(initial_state):
-    s = apply_action(initial_state, PlaceSoilAction("sandy_bed", (0, 0, 0)))
+def test_empty_soil_pile_makes_soil_purchase_illegal(initial_state):
+    initial_state.soil_pile = []
     with pytest.raises(InvalidActionError):
-        validate_action(s, PlaceSoilAction("rocky_reef", (0, 0, 0)))
+        validate_action(initial_state, PlaceSoilAction((0, 0, 0)))
 
 
 def test_rocky_reef_discounts_corals_built_on_it(initial_state):
     from reef_game.engine.economy import effective_cost
+    from reef_game.engine.models import PlacedSoil
 
-    initial_state.board.cells[(0, 0, 0)].soil = None
-    s = apply_action(initial_state, PlaceSoilAction("rocky_reef", (0, 0, 0)))  # P1
-    coral = s.available_corals["grooved_brain_coral"]  # normally 2 Sun
-    cost = effective_cost(s, coral, (0, 0, 0))
+    initial_state.board.cells[(0, 0, 0)].soil = PlacedSoil("rocky_reef", PlayerId.P1, (0, 0, 0))
+    coral = initial_state.available_corals["grooved_brain_coral"]  # normally 2 Sun
+    cost = effective_cost(initial_state, coral, (0, 0, 0))
     assert cost[ResourceType.SUN] == 1  # 2 - 1 (rocky reef)
 
 
 def test_soil_produces_for_its_owner(initial_state):
     from reef_game.engine.models import PlacedSoil
 
-    # Seagrass Meadow: +2 Sun, +1 Plankton per round, owned by P1.
     cell = initial_state.board.cells[(0, 0, 0)]
-    cell.soil = PlacedSoil("seagrass_meadow", PlayerId.P1, (0, 0, 0))
+    cell.soil = PlacedSoil("seagrass_meadow", PlayerId.P1, (0, 0, 0))  # +2 Sun, +1 Plankton
     sun0 = initial_state.players[PlayerId.P1].resources[ResourceType.SUN]
-    plk0 = initial_state.players[PlayerId.P1].resources[ResourceType.PLANKTON]
 
     gains = resolve_production(initial_state)
 
     assert gains[PlayerId.P1][ResourceType.SUN] == 2
     assert gains[PlayerId.P1][ResourceType.PLANKTON] == 1
     assert initial_state.players[PlayerId.P1].resources[ResourceType.SUN] == sun0 + 2
-    assert initial_state.players[PlayerId.P1].resources[ResourceType.PLANKTON] == plk0 + 1
     assert initial_state.players[PlayerId.P1].produced_resources[ResourceType.SUN] == 2

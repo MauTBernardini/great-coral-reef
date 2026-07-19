@@ -32,8 +32,16 @@ class GreedyAgent(BaseAgent):
         if action.action_type == ActionType.PASS:
             return -9999
 
+        if action.action_type == ActionType.BUY_FLORA:
+            # Flora ainda não tem efeito; ligeiramente acima de passar.
+            return 0.05
+
         if action.action_type == ActionType.PLACE_SOIL:
-            soil = state.available_soils[action.soil_id]
+            soil_id = state.soil_pile[0]
+            soil = state.available_soils[soil_id]
+            sun_cost = soil.cost.values.get(ResourceType.SUN, 0)
+            if state.players[owner].resources.get(ResourceType.SUN, 0) < sun_cost:
+                return -50  # topo caro demais: compra seria uma ação perdida
             production_value = sum(
                 _PRODUCTION_WEIGHT.get(r, 0.0) * amount for r, amount in soil.production.items()
             )

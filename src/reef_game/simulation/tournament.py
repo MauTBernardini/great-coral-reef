@@ -12,7 +12,7 @@ except ImportError:
 
 from ..agents.greedy_agent import GreedyAgent
 from ..agents.random_agent import RandomAgent
-from ..content.loader import load_corals, load_soils, load_yaml_config
+from ..content.loader import load_corals, load_flora, load_soils, load_yaml_config
 from ..engine.enums import PlayerId
 from ..engine.setup import create_initial_state, load_balance_rules, load_climate_config
 from .runner import run_game
@@ -23,6 +23,7 @@ class TournamentConfig:
     games: int = 100
     corals_path: str = "configs/corals.yaml"
     soils_path: str = "configs/soils.yaml"
+    flora_path: str = "configs/flora.yaml"
     balance_rules_path: str = "configs/balance_rules.yaml"
     climate_path: str = "configs/climate.yaml"
     version_path: str = "configs/version.yaml"
@@ -47,6 +48,7 @@ AGENT_FACTORY = {
 def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     corals = load_corals(config.corals_path)
     soils = load_soils(config.soils_path)
+    flora = load_flora(config.flora_path)
     balance_rules = load_balance_rules(config.balance_rules_path)
     climate_config = load_climate_config(config.climate_path)
     version_config = load_yaml_config(config.version_path)
@@ -67,6 +69,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             balance_rules=balance_rules,
             climate_config=climate_config,
             soil_definitions=soils,
+            flora_definitions=flora,
         )
         agents = {
             PlayerId.P1: AGENT_FACTORY[config.agent_p1](seed),

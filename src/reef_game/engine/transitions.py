@@ -1,9 +1,14 @@
 from copy import deepcopy
 
-from .actions import PlaceCoralAction, PlaceSoilAction, PlaceStaghornPairAction
+from .actions import (
+    BuyFloraAction,
+    PlaceCoralAction,
+    PlaceSoilAction,
+    PlaceStaghornPairAction,
+)
 from .economy import effective_cost
 from .enums import ActionType, PlayerId, ResourceType
-from .models import PlacedCoral, PlacedSoil
+from .models import MAX_HAND_SIZE, PlacedCoral, PlacedSoil
 from .production import resolve_production
 from .scoring import recompute_scores
 from .termination import check_game_end
@@ -44,21 +49,43 @@ def apply_action(state, action, max_rounds: int | None = None):
         check_game_end(next_state, max_rounds=max_rounds)
         return next_state
 
+    if action.action_type == ActionType.BUY_FLORA:
+        _apply_buy_flora(next_state, action)
+        _advance_turn(next_state)
+        check_game_end(next_state, max_rounds=max_rounds)
+        return next_state
+
     raise ValueError("Unsupported action type.")
 
 
 def _apply_place_soil(state, action: PlaceSoilAction):
     player = state.players[state.active_player]
-    soil = state.available_soils[action.soil_id]
-    cell = state.board.cells[action.position]
+    soil_id = state.soil_pile[0]  # topo da pilha (não se escolhe o tipo)
+    soil = state.available_soils[soil_id]
+    sun_cost = soil.cost.values.get(ResourceType.SUN, 0)
 
-    cell.soil = PlacedSoil(
-        soil_id=action.soil_id,
+    if player.resources.get(ResourceType.SUN, 0) < sun_cost:
+        # Ação perdida: o solo volta ao topo da pilha (nada é pago nem colocado).
+        player.dead_turns += 1
+        player.passed_last_turn = False
+        _append_history(
+            state,
+            action,
+            {
+                "soil_id": soil_id,
+                "position": action.position,
+                "result": "soil_purchase_lost",
+                "reason": "insufficient_sun",
+            },
+        )
+        return
+
+    state.soil_pile.pop(0)
+    state.board.cells[action.position].soil = PlacedSoil(
+        soil_id=soil_id,
         owner=state.active_player,
         position=action.position,
     )
-    state.soil_supply[action.soil_id] = state.soil_supply.get(action.soil_id, 0) - 1
-
     for resource, amount in soil.cost.values.items():
         player.resources[resource] -= amount
         player.spent_resources[resource] = player.spent_resources.get(resource, 0) + amount
@@ -68,9 +95,32 @@ def _apply_place_soil(state, action: PlaceSoilAction):
         state,
         action,
         {
-            "soil_id": action.soil_id,
+            "soil_id": soil_id,
             "position": action.position,
             "result": "place_soil",
+        },
+    )
+
+
+def _apply_buy_flora(state, action: BuyFloraAction):
+    player = state.players[state.active_player]
+    space = MAX_HAND_SIZE - len(player.hand)
+    drawn = min(action.count, space, len(state.flora_deck))
+
+    bought = []
+    for _ in range(drawn):
+        bought.append(state.flora_deck.pop(0))
+    player.hand.extend(bought)
+
+    player.passed_last_turn = False
+    _append_history(
+        state,
+        action,
+        {
+            "result": "buy_flora",
+            "requested": action.count,
+            "bought": bought,
+            "hand_size": len(player.hand),
         },
     )
 

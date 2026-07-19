@@ -40,15 +40,28 @@ class PlaceStaghornPairAction(Action):
 
 @dataclass(frozen=True)
 class PlaceSoilAction(Action):
-    """Comprar e colocar um tile de solo na camada do fundo (z=0)."""
+    """Comprar o solo do topo da pilha e baixá-lo no fundo (z=0), na posição dada.
 
-    soil_id: str
+    O tipo de solo é o topo da pilha (não se escolhe). Se o custo (Sol) do solo
+    sacado for maior que o Sol do jogador, a ação é perdida e o solo volta ao topo.
+    """
+
     position: Tuple[int, int, int]
 
-    def __init__(self, soil_id: str, position: Tuple[int, int, int]):
+    def __init__(self, position: Tuple[int, int, int]):
         object.__setattr__(self, "action_type", ActionType.PLACE_SOIL)
-        object.__setattr__(self, "soil_id", soil_id)
         object.__setattr__(self, "position", position)
+
+
+@dataclass(frozen=True)
+class BuyFloraAction(Action):
+    """Comprar 2 cartas de flora fechadas (sacar do deck para a mão, teto de 10)."""
+
+    count: int = 2
+
+    def __init__(self, count: int = 2):
+        object.__setattr__(self, "action_type", ActionType.BUY_FLORA)
+        object.__setattr__(self, "count", count)
 
 
 @dataclass(frozen=True)

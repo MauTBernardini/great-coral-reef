@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from reef_game.content.loader import load_corals, load_soils
+from reef_game.content.loader import load_corals, load_flora, load_soils
 from reef_game.engine.enums import PlayerId
 from reef_game.engine.models import PlacedSoil
 from reef_game.engine.setup import create_initial_state, load_balance_rules, load_climate_config
@@ -21,6 +21,11 @@ def soil_defs():
 
 
 @pytest.fixture
+def flora_defs():
+    return load_flora(ROOT / "configs" / "flora.yaml")
+
+
+@pytest.fixture
 def balance_rules():
     return load_balance_rules(ROOT / "configs" / "balance_rules.yaml")
 
@@ -31,13 +36,14 @@ def climate_config():
 
 
 @pytest.fixture
-def initial_state(coral_defs, soil_defs, balance_rules, climate_config):
+def initial_state(coral_defs, soil_defs, flora_defs, balance_rules, climate_config):
     return create_initial_state(
         seed=42,
         coral_definitions=coral_defs,
         balance_rules=balance_rules,
         climate_config=climate_config,
         soil_definitions=soil_defs,
+        flora_definitions=flora_defs,
     )
 
 

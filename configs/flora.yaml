@@ -1,0 +1,15 @@
+# Deck de cartas de flora (compradas fechadas para a mão).
+# Efeitos ainda nao implementados: por hora sao cartas mantidas na mao (teto de 10).
+# count = numero de copias no deck embaralhado.
+flora:
+  - flora_id: kelp_forest
+    name: Kelp Forest
+    count: 14
+
+  - flora_id: sea_grass
+    name: Sea Grass
+    count: 14
+
+  - flora_id: coralline_algae
+    name: Coralline Algae
+    count: 12
