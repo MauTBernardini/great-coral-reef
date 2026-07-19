@@ -53,6 +53,9 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
     climate_config = load_climate_config(config.climate_path)
     version_config = load_yaml_config(config.version_path)
 
+    coral_ids = sorted(corals.keys())
+    soil_ids = sorted(soils.keys())
+
     rows = []
     turn_state_rows = []
     turn_state_snapshots = []
@@ -84,8 +87,7 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
         if config.save_turn_states_detail:
             turn_state_snapshots.extend(telemetry.states)
 
-        rows.append(
-            {
+        row = {
                 "seed": seed,
                 "winner": summary["winner"],
                 "turns": summary["turns"],
@@ -108,15 +110,23 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
                 "p2_produced_plankton": summary["produced_resources"][2]["plankton"],
                 "p1_soils": summary["soils_on_board"][1],
                 "p2_soils": summary["soils_on_board"][2],
-                "p1_soil_lost": summary["soil_purchases_lost"][1],
-                "p2_soil_lost": summary["soil_purchases_lost"][2],
+                "p1_lost_soil_buys": summary["soil_purchases_lost"][1],
+                "p2_lost_soil_buys": summary["soil_purchases_lost"][2],
                 "p1_hand": summary["hand_size"][1],
                 "p2_hand": summary["hand_size"][2],
                 "soil_pile_remaining": summary["soil_pile_remaining"],
                 "flora_deck_remaining": summary["flora_deck_remaining"],
                 "terminal": final_state.is_terminal,
-            }
-        )
+        }
+        # Volume por tipo de coral e de solo, por jogador (para análise volume x score).
+        for pid in (1, 2):
+            corals_by_type = summary["corals_by_type"][pid]
+            for coral_id in coral_ids:
+                row[f"p{pid}_coral_{coral_id}"] = corals_by_type.get(coral_id, 0)
+            soils_by_type = summary["soils_by_type"][pid]
+            for soil_id in soil_ids:
+                row[f"p{pid}_soil_{soil_id}"] = soils_by_type.get(soil_id, 0)
+        rows.append(row)
 
     df = pd.DataFrame(rows)
 
@@ -149,7 +159,9 @@ def summarize_tournament(df: pd.DataFrame) -> dict:
         "avg_p2_score": float(df["p2_score"].mean()),
         "avg_board_occupancy": float(df["board_occupancy"].mean()),
         "avg_soils_per_player": float((df["p1_soils"] + df["p2_soils"]).mean() / 2),
-        "avg_soil_lost_per_player": float((df["p1_soil_lost"] + df["p2_soil_lost"]).mean() / 2),
+        "avg_soil_lost_per_player": float(
+            (df["p1_lost_soil_buys"] + df["p2_lost_soil_buys"]).mean() / 2
+        ),
         "avg_produced_sun_per_player": float(
             (df["p1_produced_sun"] + df["p2_produced_sun"]).mean() / 2
         ),
