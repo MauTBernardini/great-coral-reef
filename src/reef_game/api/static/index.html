@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Catálogo de cartas, regras e torneios do Great Coral Reef">
+    <title>Great Coral Reef · Atlas</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="water-glow water-glow-one"></div>
+    <div class="water-glow water-glow-two"></div>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Great Coral Reef — início">
+        <span class="brand-mark">GCR</span>
+        <span><strong>Great Coral Reef</strong><small>Atlas do jogo</small></span>
+      </a>
+      <nav aria-label="Navegação principal">
+        <a href="#cards">Cartas</a>
+        <a href="#rules">Regras</a>
+        <a href="#tournaments">Torneios</a>
+        <a class="docs-link" href="/docs">API Docs ↗</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="eyebrow">Base de conhecimento do recife</div>
+        <h1>Explore cada camada<br>do <em>ecossistema.</em></h1>
+        <p>Consulte cartas, entenda as regras e compare resultados de estratégias já testadas.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#cards">Abrir catálogo</a>
+          <a class="button button-quiet" href="#tournaments">Ver torneios</a>
+        </div>
+        <div id="game-stats" class="stats-strip" aria-label="Resumo do jogo">
+          <span class="skeleton">Carregando dados do recife…</span>
+        </div>
+      </section>
+
+      <section id="cards" class="content-section">
+        <div class="section-heading">
+          <div><span class="section-index">01</span><h2>Catálogo de cartas</h2></div>
+          <p>Filtre por família ou procure qualquer atributo, efeito e requisito.</p>
+        </div>
+        <div class="catalog-toolbar">
+          <div id="type-filters" class="filter-list" aria-label="Tipos de carta"></div>
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="card-search" type="search" placeholder="Buscar nome, efeito, custo…" autocomplete="off">
+          </label>
+        </div>
+        <div class="result-line"><strong id="card-count">0 cartas</strong><span id="active-filter">Todo o catálogo</span></div>
+        <div id="card-grid" class="card-grid" aria-live="polite"></div>
+      </section>
+
+      <section id="rules" class="content-section rules-section">
+        <div class="section-heading">
+          <div><span class="section-index">02</span><h2>Como o recife cresce</h2></div>
+          <p>Um guia rápido do fluxo da partida ao cálculo da vitória.</p>
+        </div>
+        <div id="rules-grid" class="rules-grid"></div>
+      </section>
+
+      <section id="tournaments" class="content-section">
+        <div class="section-heading">
+          <div><span class="section-index">03</span><h2>Laboratório de estratégias</h2></div>
+          <p>Resultados persistidos de torneios, disponíveis para inspeção e download.</p>
+        </div>
+        <div id="tournament-grid" class="tournament-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>Great Coral Reef · ferramenta local de balanceamento</span>
+      <a href="/api/health">status da API</a>
+    </footer>
+
+    <dialog id="card-dialog">
+      <button class="dialog-close" type="button" aria-label="Fechar">×</button>
+      <div id="card-detail"></div>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

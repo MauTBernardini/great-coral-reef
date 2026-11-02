@@ -95,6 +95,28 @@ python scripts/run_tournament.py --games 200 --p1 greedy --p2 longterm --paired
 Os resultados são gravados em `artifacts/tournaments/`. Dependendo das opções de
 telemetria, os arquivos de estados detalhados podem ultrapassar 100 MB.
 
+### Consultar cartas, regras e torneios pela web
+
+A aplicação FastAPI oferece uma interface visual para o catálogo do jogo e também
+uma API REST. Inicie o servidor a partir da raiz do projeto:
+
+```powershell
+py -3.12 -m uvicorn reef_game.api.app:app --app-dir src --reload
+```
+
+Abra `http://127.0.0.1:8000` para usar a interface ou
+`http://127.0.0.1:8000/docs` para explorar a documentação interativa da API.
+Os principais endpoints são:
+
+- `GET /api/cards` e `GET /api/cards/{tipo}/{id}`: catálogo e detalhes das cartas;
+- `GET /api/rules`: regras e limites gerais;
+- `GET /api/tournaments`: torneios persistidos em `artifacts/tournaments/`;
+- `GET /api/tournaments/{id}/report`: relatório HTML, quando disponível;
+- `GET /api/game` e `GET /api/health`: metadados do jogo e estado do serviço.
+
+Os filtros `type` e `search` de `/api/cards` permitem consultar um tipo específico
+ou pesquisar em todos os atributos das cartas.
+
 ### Executar os testes
 
 ```powershell
