@@ -11,7 +11,7 @@ soils:
       sun: 1
     production:
       sun: 1
-    supply: 8
+    supply: 32
 
   - soil_id: rocky_reef
     name: Rocky Reef
@@ -21,7 +21,7 @@ soils:
       plankton: 1
     # Habilidade: corais construidos nesta coluna custam 1 Sol a menos.
     coral_cost_reduction: 1
-    supply: 5
+    supply: 20
 
   - soil_id: dark_overhang
     name: Dark Overhang
@@ -29,7 +29,7 @@ soils:
       sun: 2
     production:
       plankton: 1
-    supply: 5
+    supply: 20
 
   - soil_id: seagrass_meadow
     name: Seagrass Meadow
@@ -38,4 +38,4 @@ soils:
     production:
       sun: 2
       plankton: 1
-    supply: 2
+    supply: 8

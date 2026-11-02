@@ -112,6 +112,9 @@ Os CSVs de partidas, jogadores e resumo, além dos metadados do experimento, sã
 gravados em `artifacts/experiments/`. O modo compacto reduz somente a enumeração
 de posições equivalentes para os agentes atuais; as regras do jogo não mudam.
 
+O jogo padrão usa atualmente 80 solos no suprimento compartilhado: 32 Sandy Bed,
+20 Rocky Reef, 20 Dark Overhang e 8 Seagrass Meadow.
+
 ### Consultar cartas, regras e torneios pela web
 
 A aplicação FastAPI oferece uma interface visual para o catálogo do jogo e também

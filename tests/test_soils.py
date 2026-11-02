@@ -7,6 +7,20 @@ from reef_game.engine.transitions import apply_action
 from reef_game.engine.validators import InvalidActionError, validate_action
 
 
+def test_default_soil_supply_has_eighty_tiles(initial_state):
+    assert len(initial_state.soil_pile) == 80
+    quantities = {
+        soil_id: initial_state.soil_pile.count(soil_id)
+        for soil_id in initial_state.available_soils
+    }
+    assert quantities == {
+        "sandy_bed": 32,
+        "rocky_reef": 20,
+        "dark_overhang": 20,
+        "seagrass_meadow": 8,
+    }
+
+
 def test_coral_requires_soil_at_column_base(initial_state):
     # No soil placed yet -> any coral placement is rejected (mesmo com a carta na mão).
     initial_state.players[PlayerId.P1].hand.append("grooved_brain_coral")
