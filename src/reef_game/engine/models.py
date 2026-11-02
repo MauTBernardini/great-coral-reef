@@ -238,6 +238,7 @@ class GameState:
     round: int
     active_player: PlayerId
     players: Dict[PlayerId, PlayerState]
+    rotate_start_player: bool
     board: BoardState
     available_corals: Dict[str, CoralDefinition]
     temperature: float

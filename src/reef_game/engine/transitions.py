@@ -455,7 +455,11 @@ def _start_new_round(state):
         player.bought_corals_this_round = False
         player.moved_fauna_this_round = False
         player.used_generalist_diet_this_round = False
-    state.active_player = next(iter(state.players))
+    player_order = list(state.players)
+    if state.rotate_start_player:
+        state.active_player = player_order[(state.round - 1) % len(player_order)]
+    else:
+        state.active_player = player_order[0]
     # Cada rodada inicia com a produção e um evento climático.
     _resolve_production_round(state)
     # A produção pode sacrificar fauna (falta de O2) -> reflete no score.

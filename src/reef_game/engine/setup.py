@@ -29,6 +29,7 @@ def _default_balance_rules() -> dict:
         "board": {"width": 16, "height": 16, "max_layers": 3},
         "players": {
             "count": 4,
+            "rotate_start_player": False,
             "initial_resources": {"sun": 10, "plankton": 10},
         },
         "climate": {
@@ -194,6 +195,7 @@ def create_initial_state(
         round=1,
         active_player=player_ids[0],
         players=players,
+        rotate_start_player=players_cfg.get("rotate_start_player", False),
         board=board,
         available_corals=coral_definitions,
         temperature=climate_cfg["initial_temperature"],

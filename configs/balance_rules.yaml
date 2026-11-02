@@ -5,6 +5,7 @@ board:
 
 players:
   count: 4
+  rotate_start_player: false
   initial_resources:
     sun: 3
     plankton: 2

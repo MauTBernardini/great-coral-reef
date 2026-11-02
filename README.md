@@ -98,6 +98,20 @@ regulares usam as quatro cadeiras e exportam métricas de P1, P2, P3 e P4.
 Os resultados são gravados em `artifacts/tournaments/`. Dependendo das opções de
 telemetria, os arquivos de estados detalhados podem ultrapassar 100 MB.
 
+### Executar experimentos de balanceamento
+
+O sweep ordenado compara o baseline, a rotação do jogador inicial, ofertas de
+40/60/80 solos e, por fim, uma partida mais longa por clima. Para cada seed, as
+estratégias trocam entre os assentos ímpares e pares:
+
+```powershell
+py -3.12 scripts/run_balance_experiments.py --seeds 20 --rotations 2 --seed-start 11000
+```
+
+Os CSVs de partidas, jogadores e resumo, além dos metadados do experimento, são
+gravados em `artifacts/experiments/`. O modo compacto reduz somente a enumeração
+de posições equivalentes para os agentes atuais; as regras do jogo não mudam.
+
 ### Consultar cartas, regras e torneios pela web
 
 A aplicação FastAPI oferece uma interface visual para o catálogo do jogo e também
