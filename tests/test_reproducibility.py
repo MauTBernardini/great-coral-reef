@@ -18,6 +18,7 @@ def test_same_seed_and_agents_produce_same_summary(initial_state):
     soil_defs = load_soils(root / "configs" / "soils.yaml")
     fauna_defs = load_fauna(root / "configs" / "fauna.yaml")
     balance_rules = load_balance_rules(root / "configs" / "balance_rules.yaml")
+    balance_rules["players"]["count"] = 2
     climate_config = load_climate_config(root / "configs" / "climate.yaml")
     fresh_state = create_initial_state(
         seed=42,

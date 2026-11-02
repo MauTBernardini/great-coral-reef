@@ -27,7 +27,11 @@ def fauna_defs():
 
 @pytest.fixture
 def balance_rules():
-    return load_balance_rules(ROOT / "configs" / "balance_rules.yaml")
+    rules = load_balance_rules(ROOT / "configs" / "balance_rules.yaml")
+    # A maioria dos testes unitÃ¡rios isola mecÃ¢nicas usando alternÃ¢ncia P1/P2.
+    # A configuraÃ§Ã£o de produÃ§Ã£o usa quatro jogadores e possui testes dedicados.
+    rules["players"]["count"] = 2
+    return rules
 
 
 @pytest.fixture

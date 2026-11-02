@@ -25,6 +25,8 @@ def main(
     games: int = 50,
     p1: str = "random",
     p2: str = "greedy",
+    p3: str = "longterm",
+    p4: str = "random",
     no_progress: bool = False,
     paired: bool = False,
     randomize_seats: bool = False,
@@ -39,6 +41,8 @@ def main(
         output_dir=str(ROOT / "artifacts" / "tournaments"),
         agent_p1=p1,
         agent_p2=p2,
+        agent_p3=p3,
+        agent_p4=p4,
         show_progress=not no_progress,
         randomize_seats=randomize_seats,
     )
@@ -63,7 +67,10 @@ def main(
         )
     else:
         df = run_tournament(config)
-        print(f"Agentes: P1={p1}  P2={p2}  (randomize_seats={randomize_seats})")
+        print(
+            f"Agentes: P1={p1}  P2={p2}  P3={p3}  P4={p4} "
+            f"(randomize_seats={randomize_seats})"
+        )
         print(df.head().to_string(index=False))
         print("Resumo por posicao:", summarize_tournament(df))
         print("Resumo por AGENTE:", summarize_by_agent(df))

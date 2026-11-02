@@ -86,4 +86,4 @@ def test_tournament_writes_turn_state_files():
     assert len(lines) > 0
     first = json.loads(lines[0])
     assert "players" in first and "temperature" in first
-    assert set(first["players"]) == {"1", "2"}  # JSON keys are strings
+    assert set(first["players"]) == {"1", "2", "3", "4"}  # JSON keys are strings

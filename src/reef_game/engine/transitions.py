@@ -11,7 +11,7 @@ from .actions import (
     PlayParasiteAction,
 )
 from .economy import effective_cost
-from .enums import ActionType, PlayerId, ResourceType
+from .enums import ActionType, ResourceType
 from .models import MAX_HAND_SIZE, PlacedCoral, PlacedSoil
 from .ponds import maybe_form_pond
 from .production import resolve_production
@@ -438,14 +438,14 @@ def _advance_turn(state):
     current = state.active_player
     # O bônus grátis de mover small fish é por turno: reseta ao encerrar o turno.
     state.players[current].moved_small_fish_this_turn = False
-    other = PlayerId.P1 if current == PlayerId.P2 else PlayerId.P2
-
-    if not state.players[other].passed_this_round:
-        state.active_player = other
-    elif not state.players[current].passed_this_round:
-        state.active_player = current  # oponente saiu; segue jogando sozinho
-    else:
-        _start_new_round(state)
+    player_order = list(state.players)
+    current_index = player_order.index(current)
+    for offset in range(1, len(player_order) + 1):
+        candidate = player_order[(current_index + offset) % len(player_order)]
+        if not state.players[candidate].passed_this_round:
+            state.active_player = candidate
+            return
+    _start_new_round(state)
 
 
 def _start_new_round(state):
@@ -455,7 +455,7 @@ def _start_new_round(state):
         player.bought_corals_this_round = False
         player.moved_fauna_this_round = False
         player.used_generalist_diet_this_round = False
-    state.active_player = PlayerId.P1
+    state.active_player = next(iter(state.players))
     # Cada rodada inicia com a produção e um evento climático.
     _resolve_production_round(state)
     # A produção pode sacrificar fauna (falta de O2) -> reflete no score.

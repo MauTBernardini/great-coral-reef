@@ -26,8 +26,11 @@ def load_climate_config(path: str | Path) -> dict:
 
 def _default_balance_rules() -> dict:
     return {
-        "board": {"width": 4, "height": 4, "max_layers": 3},
-        "players": {"initial_resources": {"sun": 10, "plankton": 10}},
+        "board": {"width": 16, "height": 16, "max_layers": 3},
+        "players": {
+            "count": 4,
+            "initial_resources": {"sun": 10, "plankton": 10},
+        },
         "climate": {
             "initial_temperature": 28.0,
             "initial_ph": 8.1,
@@ -65,7 +68,9 @@ def build_climate_deck(seed: int, climate_cfg: dict) -> list[ClimateCard]:
 
     deck_size = climate_cfg.get("deck_size", len(expanded_deck))
     if deck_size > len(expanded_deck):
-        raise ValueError("Configured climate deck_size exceeds the number of available card instances.")
+        raise ValueError(
+            "Configured climate deck_size exceeds the number of available card instances."
+        )
 
     rng = Random(seed)
     rng.shuffle(expanded_deck)
@@ -136,12 +141,13 @@ def create_initial_state(
     coral_deck = build_coral_deck(seed, coral_definitions, fauna_definitions)
     instinct_deck = build_instinct_deck(seed, instinct_definitions)
     upgrade_deck = build_upgrade_deck(seed, upgrade_definitions)
-    # Oferta inicial: só Instinto (2 opções, escolhe 1).
-    p1_offer = {"instincts": draw_instinct_offer(instinct_deck), "upgrades": []}
-    p2_offer = {"instincts": draw_instinct_offer(instinct_deck), "upgrades": []}
-
     board_cfg = balance_rules["board"]
-    resource_cfg = balance_rules["players"]["initial_resources"]
+    players_cfg = balance_rules["players"]
+    resource_cfg = players_cfg["initial_resources"]
+    player_count = players_cfg.get("count", 4)
+    if not 2 <= player_count <= len(PlayerId):
+        raise ValueError(f"players.count must be between 2 and {len(PlayerId)}")
+    player_ids = list(PlayerId)[:player_count]
     climate_cfg = balance_rules["climate"]
     era_thresholds = {int(era): values for era, values in climate_cfg["era_thresholds"].items()}
     climate_deck_cfg = {
@@ -169,30 +175,24 @@ def create_initial_state(
         n = min(STARTING_HAND_SIZE, len(coral_deck))
         return [coral_deck.pop(0) for _ in range(n)]
 
-    players = {
-        PlayerId.P1: PlayerState(
-            player_id=PlayerId.P1,
+    players = {}
+    for player_id in player_ids:
+        # Oferta inicial: só Instinto (2 opções, escolhe 1).
+        initial_offer = {"instincts": draw_instinct_offer(instinct_deck), "upgrades": []}
+        players[player_id] = PlayerState(
+            player_id=player_id,
             resources=initial_resources(),
             hand=deal_hand(),
             spent_resources=zeroed(),
             produced_resources=zeroed(),
-            pending_card_offers=[p1_offer] if p1_offer["instincts"] else [],
-        ),
-        PlayerId.P2: PlayerState(
-            player_id=PlayerId.P2,
-            resources=initial_resources(),
-            hand=deal_hand(),
-            spent_resources=zeroed(),
-            produced_resources=zeroed(),
-            pending_card_offers=[p2_offer] if p2_offer["instincts"] else [],
-        ),
-    }
+            pending_card_offers=[initial_offer] if initial_offer["instincts"] else [],
+        )
 
     return GameState(
         seed=seed,
         turn=1,
         round=1,
-        active_player=PlayerId.P1,
+        active_player=player_ids[0],
         players=players,
         board=board,
         available_corals=coral_definitions,

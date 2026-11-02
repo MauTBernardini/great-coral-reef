@@ -10,6 +10,8 @@ class ResourceType(str, Enum):
 class PlayerId(int, Enum):
     P1 = 1
     P2 = 2
+    P3 = 3
+    P4 = 4
 
 
 class ActionType(str, Enum):

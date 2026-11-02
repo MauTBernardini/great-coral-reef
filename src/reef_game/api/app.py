@@ -196,6 +196,7 @@ def health() -> dict[str, str]:
 @app.get("/api/game", tags=["Jogo"])
 def game_information() -> dict[str, Any]:
     cards = _all_cards()
+    balance = _load_yaml("balance_rules.yaml")
     return {
         "name": "Great Coral Reef",
         "version": app.version,
@@ -206,6 +207,8 @@ def game_information() -> dict[str, Any]:
         "card_counts": {card_type: len(items) for card_type, items in cards.items()},
         "total_cards": sum(len(items) for items in cards.values()),
         "rules_sections": len(GAME_RULES),
+        "player_count": balance.get("players", {}).get("count", 4),
+        "board": balance.get("board", {}),
     }
 
 

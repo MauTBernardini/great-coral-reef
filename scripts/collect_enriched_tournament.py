@@ -294,13 +294,15 @@ def collect(games: int) -> Path:
             instinct_definitions=content["instincts"],
             upgrade_definitions=content["upgrades"],
         )
-        p1_agent, p2_agent = "greedy", "longterm"
-        if seat_rng.random() < 0.5:
-            p1_agent, p2_agent = p2_agent, p1_agent
-        agent_names = {1: p1_agent, 2: p2_agent}
+        seat_names = ["greedy", "longterm", "greedy", "longterm"]
+        seat_rng.shuffle(seat_names)
+        agent_names = {
+            player_id.value: agent_name
+            for player_id, agent_name in zip(PlayerId, seat_names, strict=True)
+        }
         agents = {
-            PlayerId.P1: GreedyAgent() if p1_agent == "greedy" else LongTermAgent(),
-            PlayerId.P2: GreedyAgent() if p2_agent == "greedy" else LongTermAgent(),
+            player_id: GreedyAgent() if agent_name == "greedy" else LongTermAgent()
+            for player_id, agent_name in zip(PlayerId, seat_names, strict=True)
         }
         final_state, summary, telemetry = run_game(state, agents, max_rounds=50)
         winner = final_state.winner
@@ -308,8 +310,7 @@ def collect(games: int) -> Path:
             {
                 "seed": seed,
                 "winner": winner.value if winner else None,
-                "p1_agent": p1_agent,
-                "p2_agent": p2_agent,
+                **{f"p{pid}_agent": name for pid, name in agent_names.items()},
                 "turns": final_state.turn,
                 "rounds": final_state.round,
                 "temperature": final_state.temperature,
@@ -319,7 +320,7 @@ def collect(games: int) -> Path:
                 "soil_remaining": len(final_state.soil_pile),
             }
         )
-        for player_id in (PlayerId.P1, PlayerId.P2):
+        for player_id in PlayerId:
             player_rows.append(
                 final_player_metrics(
                     final_state, player_id, agent_names[player_id.value], winner

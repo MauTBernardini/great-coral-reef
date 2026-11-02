@@ -1,6 +1,6 @@
 # Great Coral Reef
 
-Engine determinística e simulador de um jogo de tabuleiro competitivo para dois
+Engine determinística e simulador de um jogo de tabuleiro competitivo para quatro
 jogadores. O projeto separa as regras do jogo do conteúdo configurável para permitir
 partidas reproduzíveis por seed, torneios automatizados e análises de balanceamento.
 
@@ -10,7 +10,7 @@ Ruleset: `climate-era-v1`
 
 ## Estado atual
 
-O jogo usa um tabuleiro tridimensional de 4 x 4 x 3 camadas. Os jogadores constroem
+O jogo usa um tabuleiro tridimensional de 16 x 16 x 3 camadas. Os jogadores constroem
 solos e corais, abrigam fauna, produzem recursos e disputam pontos enquanto o clima
 avança por três eras.
 
@@ -75,7 +75,7 @@ python scripts/run_single_game.py
 ### Executar um torneio
 
 ```powershell
-python scripts/run_tournament.py --games 50 --p1 greedy --p2 longterm
+python scripts/run_tournament.py --games 50 --p1 greedy --p2 longterm --p3 greedy --p4 longterm
 ```
 
 Agentes aceitos: `random`, `greedy` e `longterm`.
@@ -83,7 +83,7 @@ Agentes aceitos: `random`, `greedy` e `longterm`.
 Para reduzir o viés da ordem dos jogadores, é possível aleatorizar os assentos:
 
 ```powershell
-python scripts/run_tournament.py --games 200 --p1 greedy --p2 longterm --randomize-seats
+python scripts/run_tournament.py --games 200 --p1 greedy --p2 longterm --p3 greedy --p4 longterm --randomize-seats
 ```
 
 Para uma comparação controlada, cada seed pode ser jogada nas duas ordens:
@@ -91,6 +91,9 @@ Para uma comparação controlada, cada seed pode ser jogada nas duas ordens:
 ```powershell
 python scripts/run_tournament.py --games 200 --p1 greedy --p2 longterm --paired
 ```
+
+O modo `--paired` permanece um duelo controlado entre duas estratégias. Torneios
+regulares usam as quatro cadeiras e exportam métricas de P1, P2, P3 e P4.
 
 Os resultados são gravados em `artifacts/tournaments/`. Dependendo das opções de
 telemetria, os arquivos de estados detalhados podem ultrapassar 100 MB.
@@ -101,11 +104,11 @@ A aplicação FastAPI oferece uma interface visual para o catálogo do jogo e ta
 uma API REST. Inicie o servidor a partir da raiz do projeto:
 
 ```powershell
-py -3.12 -m uvicorn reef_game.api.app:app --app-dir src --reload
+py -3.12 -m uvicorn reef_game.api.app:app --app-dir src --reload --port 8765
 ```
 
-Abra `http://127.0.0.1:8000` para usar a interface ou
-`http://127.0.0.1:8000/docs` para explorar a documentação interativa da API.
+Abra `http://127.0.0.1:8765` para usar a interface ou
+`http://127.0.0.1:8765/docs` para explorar a documentação interativa da API.
 Os principais endpoints são:
 
 - `GET /api/cards` e `GET /api/cards/{tipo}/{id}`: catálogo e detalhes das cartas;
@@ -132,7 +135,7 @@ python -m ruff check src scripts tests
 ## Fluxo de uma rodada
 
 Durante seu turno, um jogador pode comprar cartas, colocar solo, construir coral,
-jogar ou mover fauna, usar determinadas habilidades ou passar. Quando ambos passam:
+jogar ou mover fauna, usar determinadas habilidades ou passar. Quando todos passam:
 
 1. uma nova rodada é iniciada;
 2. solos, corais e fauna produzem recursos;

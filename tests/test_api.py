@@ -21,6 +21,8 @@ def test_health_and_frontend() -> None:
 def test_game_and_card_catalog() -> None:
     game = client.get("/api/game").json()
     assert game["total_cards"] > 0
+    assert game["player_count"] == 4
+    assert game["board"] == {"width": 16, "height": 16, "max_layers": 3}
     assert set(game["card_counts"]) == {
         "coral",
         "fauna",

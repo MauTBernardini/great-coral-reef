@@ -33,6 +33,8 @@ def main():
     agents = {
         PlayerId.P1: RandomAgent(seed=42),
         PlayerId.P2: GreedyAgent(),
+        PlayerId.P3: RandomAgent(seed=43),
+        PlayerId.P4: GreedyAgent(),
     }
 
     final_state, summary, _ = run_game(state, agents=agents, max_rounds=50)

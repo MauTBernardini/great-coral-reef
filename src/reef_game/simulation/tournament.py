@@ -1,4 +1,5 @@
 import random
+from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,6 +42,8 @@ class TournamentConfig:
     output_dir: str = "artifacts/tournaments"
     agent_p1: str = "random"
     agent_p2: str = "greedy"
+    agent_p3: str = "longterm"
+    agent_p4: str = "random"
     seed_start: int = 1000
     max_rounds: int = 50
     show_progress: bool = True
@@ -48,8 +51,7 @@ class TournamentConfig:
     # Estado turno a turno: CSV longo (metricas por jogador) + JSONL detalhado (board + mao).
     save_turn_states: bool = True
     save_turn_states_detail: bool = True
-    # Aleatoriza (por seed) qual agente ocupa a cadeira P1/P2, para comparar por AGENTE
-    # em vez de por ordem de turno. As colunas p1_agent/p2_agent registram a atribuição real.
+    # Aleatoriza (por seed) os agentes entre todas as cadeiras para comparar por agente.
     randomize_seats: bool = False
 
 
@@ -95,14 +97,19 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
             instinct_definitions=instincts,
             upgrade_definitions=upgrades,
         )
-        # Atribuição de agente a cada cadeira (opcionalmente trocada por seed).
-        p1_agent, p2_agent = config.agent_p1, config.agent_p2
-        if seat_rng is not None and seat_rng.random() < 0.5:
-            p1_agent, p2_agent = p2_agent, p1_agent
-
+        # Atribuição de agente a cada cadeira, opcionalmente embaralhada por seed.
+        agent_names = [
+            config.agent_p1,
+            config.agent_p2,
+            config.agent_p3,
+            config.agent_p4,
+        ][: len(state.players)]
+        if seat_rng is not None:
+            seat_rng.shuffle(agent_names)
+        seat_agents = dict(zip(state.players, agent_names, strict=True))
         agents = {
-            PlayerId.P1: AGENT_FACTORY[p1_agent](seed),
-            PlayerId.P2: AGENT_FACTORY[p2_agent](seed + 1),
+            player_id: AGENT_FACTORY[agent_name](seed + player_id.value - 1)
+            for player_id, agent_name in seat_agents.items()
         }
         final_state, summary, telemetry = run_game(
             state, agents=agents, max_rounds=config.max_rounds
@@ -110,17 +117,15 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
         if config.save_turn_states:
             for turn_row in telemetry.to_rows():
-                turn_row["p1_agent"] = p1_agent
-                turn_row["p2_agent"] = p2_agent
-                turn_row["agent"] = p1_agent if turn_row["player"] == 1 else p2_agent
+                for player_id, agent_name in seat_agents.items():
+                    turn_row[f"p{player_id.value}_agent"] = agent_name
+                turn_row["agent"] = seat_agents[PlayerId(turn_row["player"])]
                 turn_state_rows.append(turn_row)
         if config.save_turn_states_detail:
             turn_state_snapshots.extend(telemetry.states)
 
         row = {
                 "seed": seed,
-                "p1_agent": p1_agent,
-                "p2_agent": p2_agent,
                 "winner": summary["winner"],
                 "turns": summary["turns"],
                 "rounds": summary["rounds"],
@@ -130,28 +135,22 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
                 "consumed_climate_cards": summary["consumed_climate_cards"],
                 "remaining_climate_cards": summary["remaining_climate_cards"],
                 "board_occupancy": summary["board_occupancy"],
-                "p1_score": summary["scores"][1],
-                "p2_score": summary["scores"][2],
-                "p1_efficiency": summary["efficiency_player_1"],
-                "p2_efficiency": summary["efficiency_player_2"],
-                "p1_dead_turns": summary["dead_turns"][1],
-                "p2_dead_turns": summary["dead_turns"][2],
-                "p1_produced_sun": summary["produced_resources"][1]["sun"],
-                "p2_produced_sun": summary["produced_resources"][2]["sun"],
-                "p1_produced_plankton": summary["produced_resources"][1]["plankton"],
-                "p2_produced_plankton": summary["produced_resources"][2]["plankton"],
-                "p1_soils": summary["soils_on_board"][1],
-                "p2_soils": summary["soils_on_board"][2],
-                "p1_lost_soil_buys": summary["soil_purchases_lost"][1],
-                "p2_lost_soil_buys": summary["soil_purchases_lost"][2],
-                "p1_hand": summary["hand_size"][1],
-                "p2_hand": summary["hand_size"][2],
                 "soil_pile_remaining": summary["soil_pile_remaining"],
                 "coral_deck_remaining": summary["coral_deck_remaining"],
                 "terminal": final_state.is_terminal,
         }
         # Volume por tipo de coral, solo e fauna, por jogador (para análise volume x score).
-        for pid in (1, 2):
+        for player_id, agent_name in seat_agents.items():
+            pid = player_id.value
+            row[f"p{pid}_agent"] = agent_name
+            row[f"p{pid}_score"] = summary["scores"][pid]
+            row[f"p{pid}_efficiency"] = summary[f"efficiency_player_{pid}"]
+            row[f"p{pid}_dead_turns"] = summary["dead_turns"][pid]
+            row[f"p{pid}_produced_sun"] = summary["produced_resources"][pid]["sun"]
+            row[f"p{pid}_produced_plankton"] = summary["produced_resources"][pid]["plankton"]
+            row[f"p{pid}_soils"] = summary["soils_on_board"][pid]
+            row[f"p{pid}_lost_soil_buys"] = summary["soil_purchases_lost"][pid]
+            row[f"p{pid}_hand"] = summary["hand_size"][pid]
             corals_by_type = summary["corals_by_type"][pid]
             for coral_id in coral_ids:
                 row[f"p{pid}_coral_{coral_id}"] = corals_by_type.get(coral_id, 0)
@@ -194,6 +193,8 @@ def run_tournament(config: TournamentConfig) -> pd.DataFrame:
 
 def _play_scored_game(content, seed, p1_name, p2_name, max_rounds):
     corals, soils, fauna, balance_rules, climate_config, instincts, upgrades = content
+    balance_rules = deepcopy(balance_rules)
+    balance_rules["players"]["count"] = 2
     state = create_initial_state(
         seed=seed,
         coral_definitions=corals,
@@ -319,27 +320,26 @@ def _save_paired_results(df: pd.DataFrame, config: TournamentConfig, version_con
 
 
 def summarize_by_agent(df: pd.DataFrame) -> dict:
-    """Compara por AGENTE (não por cadeira): agrega o desempenho de cada agente
-    somando as partidas em que ele foi P1 e as em que foi P2.
+    """Compara por AGENTE: agrega o desempenho em todas as cadeiras presentes.
 
     Só é uma comparação *justa* quando as cadeiras foram aleatorizadas
-    (``randomize_seats``); em cadeiras fixas, cada agente aparece em uma só cadeira e
-    isto reduz às métricas por posição.
+    (``randomize_seats``); em cadeiras fixas, a métrica inclui o efeito da posição.
     """
-    agent_names = sorted(set(df["p1_agent"]) | set(df["p2_agent"]))
+    seats = [pid for pid in range(1, 5) if f"p{pid}_agent" in df]
+    agent_names = sorted(
+        {name for pid in seats for name in df[f"p{pid}_agent"].dropna().unique()}
+    )
     result = {}
     for agent in agent_names:
-        as_p1 = df[df["p1_agent"] == agent]
-        as_p2 = df[df["p2_agent"] == agent]
-        games = len(as_p1) + len(as_p2)
+        appearances = [(pid, df[df[f"p{pid}_agent"] == agent]) for pid in seats]
+        games = sum(len(subset) for _, subset in appearances)
         if games == 0:
             continue
-        score_sum = float(as_p1["p1_score"].sum() + as_p2["p2_score"].sum())
-        wins = int((as_p1["winner"] == 1).sum() + (as_p2["winner"] == 2).sum())
+        score_sum = sum(float(subset[f"p{pid}_score"].sum()) for pid, subset in appearances)
+        wins = sum(int((subset["winner"] == pid).sum()) for pid, subset in appearances)
         result[agent] = {
             "games": games,
-            "games_as_p1": len(as_p1),
-            "games_as_p2": len(as_p2),
+            **{f"games_as_p{pid}": len(subset) for pid, subset in appearances},
             "avg_score": score_sum / games,
             "winrate": wins / games,
         }
@@ -347,29 +347,34 @@ def summarize_by_agent(df: pd.DataFrame) -> dict:
 
 
 def summarize_tournament(df: pd.DataFrame) -> dict:
-    return {
+    seats = [pid for pid in range(1, 5) if f"p{pid}_score" in df]
+    summary = {
         "games": len(df),
-        "p1_winrate": float((df["winner"] == 1).mean()),
-        "p2_winrate": float((df["winner"] == 2).mean()),
         "draw_rate": float(df["winner"].isna().mean()),
         "avg_turns": float(df["turns"].mean()),
         "avg_rounds": float(df["rounds"].mean()),
         "avg_temperature": float(df["temperature"].mean()),
         "avg_ph": float(df["ph"].mean()),
         "avg_current_era": float(df["current_era"].mean()),
-        "avg_p1_score": float(df["p1_score"].mean()),
-        "avg_p2_score": float(df["p2_score"].mean()),
         "avg_board_occupancy": float(df["board_occupancy"].mean()),
-        "avg_soils_per_player": float((df["p1_soils"] + df["p2_soils"]).mean() / 2),
+        "avg_soils_per_player": float(
+            sum(df[f"p{pid}_soils"] for pid in seats).mean() / len(seats)
+        ),
         "avg_soil_lost_per_player": float(
-            (df["p1_lost_soil_buys"] + df["p2_lost_soil_buys"]).mean() / 2
+            sum(df[f"p{pid}_lost_soil_buys"] for pid in seats).mean() / len(seats)
         ),
         "avg_produced_sun_per_player": float(
-            (df["p1_produced_sun"] + df["p2_produced_sun"]).mean() / 2
+            sum(df[f"p{pid}_produced_sun"] for pid in seats).mean() / len(seats)
         ),
-        "avg_hand_per_player": float((df["p1_hand"] + df["p2_hand"]).mean() / 2),
+        "avg_hand_per_player": float(
+            sum(df[f"p{pid}_hand"] for pid in seats).mean() / len(seats)
+        ),
         "avg_coral_deck_remaining": float(df["coral_deck_remaining"].mean()),
     }
+    for pid in seats:
+        summary[f"p{pid}_winrate"] = float((df["winner"] == pid).mean())
+        summary[f"avg_p{pid}_score"] = float(df[f"p{pid}_score"].mean())
+    return summary
 
 
 def save_tournament_results(

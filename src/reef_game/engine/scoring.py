@@ -6,7 +6,7 @@ neighbouring corals, whether a coral sits on the top layer) and therefore change
 as the game progresses.
 """
 
-from .enums import PlayerId, ResourceType
+from .enums import ResourceType
 
 STAGHORN_ID = "staghorn"
 ELKHORN_ID = "elkhorn"
@@ -414,10 +414,6 @@ def _instinct_parasites_on_enemy(state, owner) -> int:
     return count
 
 
-def _opponent(owner):
-    return PlayerId.P1 if owner == PlayerId.P2 else PlayerId.P2
-
-
 def _instinct_leftover_resources_div3(state, owner) -> int:
     """Soma de Sol + Plâncton restantes ao final, dividida por 3 (arredonda p/ baixo)."""
     r = state.players[owner].resources
@@ -433,12 +429,15 @@ def _cell_controlled_by(cell, player) -> bool:
 
 def _instinct_corals_bordering_opponent(state, owner) -> int:
     """Corais seus com ao menos um vizinho (mesma camada) controlado pelo oponente."""
-    opp = _opponent(owner)
     count = 0
     for cell in _owned_coral_cells(state, owner):
         for npos in same_layer_neighbors(cell.position):
             ncell = state.board.cells.get(npos)
-            if ncell is not None and _cell_controlled_by(ncell, opp):
+            if ncell is not None and any(
+                _cell_controlled_by(ncell, opponent)
+                for opponent in state.players
+                if opponent != owner
+            ):
                 count += 1
                 break
     return count
@@ -447,7 +446,6 @@ def _instinct_corals_bordering_opponent(state, owner) -> int:
 def _instinct_empty_sandy_beds_between(state, owner) -> int:
     """Tiles de Sandy Bed vazios (sem coral) que fazem fronteira, ao mesmo tempo,
     com um coral seu e um coral do oponente (uma 'zona-tampão' entre vocês)."""
-    opp = _opponent(owner)
     count = 0
     for (x, y, z), cell in state.board.cells.items():
         if z != 0 or cell.occupant is not None:
@@ -461,7 +459,7 @@ def _instinct_empty_sandy_beds_between(state, owner) -> int:
                 continue
             if ncell.occupant.owner == owner:
                 has_you = True
-            elif ncell.occupant.owner == opp:
+            elif ncell.occupant.owner != owner:
                 has_opp = True
         if has_you and has_opp:
             count += 1

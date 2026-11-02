@@ -7,7 +7,7 @@ from reef_game.engine.state import board_capacity
 def test_initial_state_has_expected_defaults(initial_state, balance_rules):
     assert initial_state.turn == 1
     assert initial_state.round == 1
-    assert board_capacity(initial_state) == 4 * 4 * 3
+    assert board_capacity(initial_state) == 16 * 16 * 3
     assert len(initial_state.available_corals) >= 2
     assert initial_state.temperature == 28.0
     assert initial_state.ph == 8.1

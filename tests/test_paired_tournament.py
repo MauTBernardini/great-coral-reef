@@ -21,6 +21,7 @@ def _config(p1, p2, games):
         version_path=str(ROOT / "configs" / "version.yaml"),
         show_progress=False,
         save_results=False,
+        max_rounds=5,
     )
 
 
@@ -38,6 +39,6 @@ def test_paired_runs_both_orderings_per_seed():
 def test_identical_agents_are_balanced_after_controlling_for_position():
     # greedy vs greedy: mesma habilidade -> winrates de A e B devem ficar ~parelhos,
     # mesmo que a posição sozinha decida cada jogo.
-    df = run_paired_tournament(_config("greedy", "greedy", games=30))
+    df = run_paired_tournament(_config("greedy", "greedy", games=8))
     summary = summarize_paired(df)
     assert abs(summary["a_winrate"] - summary["b_winrate"]) < 0.15

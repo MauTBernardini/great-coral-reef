@@ -133,10 +133,11 @@ def summarize_game(state, telemetry):
         summary[f"efficiency_player_{pid.value}"] = p.score / total_spent
 
     if telemetry.states:
-        p1_scores = [s["scores"][1] for s in telemetry.states]
-        p2_scores = [s["scores"][2] for s in telemetry.states]
-        summary["p1_score_volatility"] = statistics.pstdev(p1_scores) if len(p1_scores) > 1 else 0
-        summary["p2_score_volatility"] = statistics.pstdev(p2_scores) if len(p2_scores) > 1 else 0
+        for pid in players:
+            scores = [snapshot["scores"][pid.value] for snapshot in telemetry.states]
+            summary[f"p{pid.value}_score_volatility"] = (
+                statistics.pstdev(scores) if len(scores) > 1 else 0
+            )
         summary["climate_history"] = [
             {
                 "round": s["round"],

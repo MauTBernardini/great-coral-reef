@@ -138,10 +138,12 @@ def test_summary_and_telemetry_track_ponds_and_instincts():
         soil_definitions=soils, fauna_definitions=fauna, instinct_definitions=INSTINCTS,
     )
     _, summary, tel = run_game(
-        state, agents={PlayerId.P1: GreedyAgent(), PlayerId.P2: GreedyAgent()}, max_rounds=30
+        state,
+        agents={player_id: GreedyAgent() for player_id in PlayerId},
+        max_rounds=30,
     )
 
-    for pid in (1, 2):
+    for pid in (1, 2, 3, 4):
         assert set(summary[f"ponds_stats_{pid}"]) == {"mean", "median", "p25", "p75"}
         # Todo jogador tem >=1 instinto (o inicial) durante todo o jogo.
         assert summary[f"instincts_stats_{pid}"]["mean"] >= 1.0

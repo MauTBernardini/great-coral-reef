@@ -78,8 +78,8 @@ def test_total_symbiosis_is_disabled():
 
 def test_outer_wall(initial_state):
     _coral(initial_state, "staghorn", (0, 1, 0))  # borda (x=0)
-    _coral(initial_state, "staghorn", (3, 2, 0))  # borda (x=3)
-    _coral(initial_state, "staghorn", (2, 3, 0))  # borda (y=3)
+    _coral(initial_state, "staghorn", (15, 2, 0))  # borda (x=15)
+    _coral(initial_state, "staghorn", (2, 15, 0))  # borda (y=15)
     _coral(initial_state, "staghorn", (1, 1, 0))  # interior -> não conta
     _with_instinct(initial_state, "outer_wall")
     assert score_instinct(initial_state, PlayerId.P1) == 2 * 3

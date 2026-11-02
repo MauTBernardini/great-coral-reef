@@ -40,8 +40,8 @@ function usefulText(card) {
 function renderGameStats(game) {
   $("#game-stats").innerHTML = [
     [game.total_cards, "cartas catalogadas"],
-    [Object.keys(game.card_counts).length, "famílias"],
-    [game.actions.length, "ações possíveis"],
+    [game.player_count, "jogadores"],
+    [`${game.board.width}×${game.board.height}×${game.board.max_layers}`, "tabuleiro"],
     [game.rules_sections, "seções de regras"],
   ].map(([value, label]) => `<div class="stat"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`).join("");
 }

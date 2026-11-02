@@ -1,9 +1,10 @@
 board:
-  width: 4
-  height: 4
+  width: 16
+  height: 16
   max_layers: 3
 
 players:
+  count: 4
   initial_resources:
     sun: 3
     plankton: 2
