@@ -177,6 +177,8 @@ def _tournament_metadata(directory: Path) -> dict[str, Any] | None:
             for agent in (
                 config.get("agent_p1", metadata.get("summary", {}).get("agent_a")),
                 config.get("agent_p2", metadata.get("summary", {}).get("agent_b")),
+                config.get("agent_p3"),
+                config.get("agent_p4"),
             )
             if agent
         ],

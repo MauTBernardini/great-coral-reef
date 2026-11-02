@@ -69,6 +69,8 @@ def test_tournament_catalog_and_files(tmp_path, monkeypatch) -> None:
                     "games": 2,
                     "agent_p1": "greedy",
                     "agent_p2": "longterm",
+                    "agent_p3": "greedy",
+                    "agent_p4": "longterm",
                 },
                 "summary": {"paired_games": 4, "a_winrate": 0.5},
             }
@@ -83,7 +85,7 @@ def test_tournament_catalog_and_files(tmp_path, monkeypatch) -> None:
 
     listing = client.get("/api/tournaments").json()
     assert listing["total"] == 1
-    assert listing["items"][0]["agents"] == ["greedy", "longterm"]
+    assert listing["items"][0]["agents"] == ["greedy", "longterm", "greedy", "longterm"]
     assert listing["items"][0]["version"] == "0.1.0"
 
     detail = client.get("/api/tournaments/paired_example", params={"sample_rows": 1}).json()
