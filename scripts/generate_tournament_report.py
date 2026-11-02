@@ -9,6 +9,7 @@ import math
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -130,7 +131,11 @@ def numeric_card_stats(players: pd.DataFrame, prefix: str) -> pd.DataFrame:
     columns = [
         column
         for column in players
-        if column.startswith(prefix) and column not in {"fauna_total"}
+        if column.startswith(prefix)
+        and column not in {"fauna_total", "coral_points_total", "fauna_points_total"}
+        and not column.startswith("coral_points_z")
+        and not column.startswith("fauna_points_z")
+        and not column.startswith("fauna_z")
     ]
     baseline_win = players["won"].mean()
     baseline_score = players["score"].mean()
@@ -177,7 +182,23 @@ def owned_card_stats(players: pd.DataFrame, column: str) -> pd.DataFrame:
                 "score_lift": used["score"].mean() - baseline_score,
             }
         )
-    return pd.DataFrame(rows).sort_values(["total", "card"], ascending=[False, True])
+    frame = pd.DataFrame(
+        rows,
+        columns=[
+            "card",
+            "total",
+            "games_used",
+            "usage",
+            "avg_count",
+            "win_rate",
+            "avg_score",
+            "win_lift",
+            "score_lift",
+        ],
+    )
+    if frame.empty:
+        return frame
+    return frame.sort_values(["total", "card"], ascending=[False, True])
 
 
 def card_table(frame: pd.DataFrame, owned: bool = False) -> str:
@@ -431,7 +452,7 @@ def population_section(enriched: dict[str, pd.DataFrame]) -> str:
             fauna_points = subset[f"fauna_points_z{layer}"].mean()
             rows.append(
                 f"<tr><td>{display_name(agent)}</td><td>Camada {layer}</td>"
-                f"<td>{num(corals, 2)}</td><td>{pct(corals / 16)}</td>"
+            f"<td>{num(corals, 2)}</td><td>{pct(corals / 256)}</td>"
                 f"<td>{num(coral_points, 2)}</td><td>{num(coral_points / corals if corals else math.nan, 2)}</td>"
                 f"<td>{num(fauna, 2)}</td><td>{num(fauna_points, 2)}</td></tr>"
             )
@@ -719,11 +740,148 @@ P1 venceu {pct(paired_stats['residual_first_player_winrate'])} das partidas.</p>
 </main></body></html>"""
 
 
+def render_four_player_report(
+    enriched: dict[str, pd.DataFrame], enriched_dir: Path, metadata: dict
+) -> str:
+    games = enriched["games"]
+    players = enriched["players"]
+    game_count = len(games)
+    player_count = int(metadata.get("player_count", players["player"].nunique()))
+    soil_supply = int(metadata.get("soil_supply", games["soil_supply"].iloc[0]))
+    board = metadata.get("board", {"width": 16, "height": 16, "max_layers": 3})
+    board_capacity = board["width"] * board["height"] * board["max_layers"]
+    generated = datetime.now(ZoneInfo("America/Sao_Paulo")).strftime(
+        "%d/%m/%Y %H:%M BRT"
+    )
+
+    agent_rows = []
+    agent_metrics = {}
+    for agent, subset in players.groupby("agent"):
+        wins = int(subset["won"].sum())
+        metrics = {
+            "appearances": len(subset),
+            "wins": wins,
+            "game_win_rate": wins / game_count,
+            "avg_score": subset["score"].mean(),
+            "median_score": subset["score"].median(),
+        }
+        agent_metrics[agent] = metrics
+        agent_rows.append(
+            f"<tr><td>{html.escape(display_name(agent))}</td>"
+            f"<td>{metrics['appearances']}</td><td>{wins}</td>"
+            f"<td>{pct(metrics['game_win_rate'])}</td>"
+            f"<td>{num(metrics['avg_score'])}</td>"
+            f"<td>{num(metrics['median_score'])}</td></tr>"
+        )
+
+    seat_rows = []
+    seat_rates = {}
+    for seat, subset in players.groupby("player"):
+        rate = subset["won"].mean()
+        seat_rates[int(seat)] = rate
+        seat_rows.append(
+            f"<tr><td>P{int(seat)}</td><td>{pct(rate)}</td>"
+            f"<td>{num(subset['score'].mean())}</td>"
+            f"<td>{num(subset['score'].median())}</td></tr>"
+        )
+
+    supply_rows = "".join(
+        f"<tr><td>{html.escape(display_name(soil_id))}</td><td>{quantity}</td>"
+        f"<td>{pct(quantity / soil_supply)}</td></tr>"
+        for soil_id, quantity in metadata.get("soil_supply_by_type", {}).items()
+    )
+    strategy_gap = (
+        agent_metrics.get("greedy", {}).get("game_win_rate", math.nan)
+        - agent_metrics.get("longterm", {}).get("game_win_rate", math.nan)
+    )
+    score_gap = (
+        agent_metrics.get("greedy", {}).get("avg_score", math.nan)
+        - agent_metrics.get("longterm", {}).get("avg_score", math.nan)
+    )
+    soil_remaining = games["soil_remaining"].mean()
+    soil_used_rate = 1 - soil_remaining / soil_supply
+    best_seat = max(seat_rates, key=seat_rates.get)
+    seat_spread = max(seat_rates.values()) - min(seat_rates.values())
+
+    categories = "".join(
+        [
+            section_for_category("Corais presentes no fim", players, prefix="coral_"),
+            section_for_category("Fauna sobrevivente no fim", players, prefix="fauna_"),
+            section_for_category("Solos colocados", players, prefix="soil_"),
+            section_for_category("Instintos possuídos", players, column="instincts"),
+            section_for_category("Upgrades possuídos", players, column="upgrades"),
+        ]
+    )
+    css = """
+    :root{--ink:#12343b;--muted:#5f7479;--paper:#f4f9f8;--card:#fff;--reef:#007f78;
+      --coral:#ed6a5a;--line:#d8e7e4;--good:#087f5b;--bad:#c92a2a}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);
+      font:15px/1.5 Inter,Segoe UI,Arial,sans-serif}header{background:linear-gradient(135deg,#073b4c,#007f78);
+      color:white;padding:48px max(24px,calc((100% - 1180px)/2)) 40px}header h1{margin:0 0 8px;font-size:38px}
+    header p{margin:0;opacity:.86}.container{max-width:1180px;margin:auto;padding:28px 20px 64px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:0 0 28px}
+    .metric,section{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 5px 18px #12343b0a}
+    .metric{padding:18px}.metric b{display:block;font-size:27px;color:var(--reef)}.metric span{color:var(--muted)}
+    section{padding:22px;margin:18px 0}h2{margin:0 0 14px;font-size:23px}h3{margin:22px 0 8px}
+    .note{padding:13px 16px;border-left:4px solid var(--coral);background:#fff5f3;border-radius:6px;margin:14px 0}
+    .table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px 10px;
+      border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th{background:#edf6f4;color:#31565c}
+    th:first-child,td:first-child{text-align:left}.name{font-weight:600}.positive{color:var(--good);font-weight:600}
+    .negative{color:var(--bad);font-weight:600}.bar{display:inline-block;width:58px;height:7px;background:#e2eeec;
+      border-radius:5px;margin-right:7px;overflow:hidden}.bar i{display:block;height:100%;background:var(--reef)}
+    details{border-top:1px solid var(--line);padding:12px 0}summary{cursor:pointer;font-weight:700;color:var(--reef)}
+    .method{color:var(--muted);font-size:13px}code{background:#e8f1ef;padding:2px 5px;border-radius:4px}
+    .chart{width:100%;min-width:560px;background:#fbfdfd;border:1px solid var(--line);border-radius:10px}
+    .chart text{font-size:11px;fill:var(--muted)}.gridline{stroke:#dfeae8;stroke-width:1}
+    .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(440px,1fr));gap:18px}
+    .histogram{height:205px;display:flex;align-items:flex-end;gap:8px;padding:15px 10px 0;border-bottom:1px solid var(--line)}
+    .hist-col{height:185px;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;min-width:45px}
+    .hist-col i{display:block;width:70%;background:linear-gradient(#16a39a,#007f78);border-radius:5px 5px 0 0}
+    .hist-col span,.hist-col small{font-size:11px;color:var(--muted)}.compact{margin-top:12px}.narrow{max-width:560px}
+    .findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}.findings article{padding:15px;background:#f5faf9;border:1px solid var(--line);border-radius:10px}.findings b{color:var(--reef)}.findings p{margin:5px 0 0}
+    footer{text-align:center;color:var(--muted);margin-top:28px}@media(max-width:650px){header h1{font-size:30px}}
+    """
+    return f"""<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Great Coral Reef — Relatório 4 jogadores / 80 solos</title><style>{css}</style></head><body>
+<header><h1>Torneio de quatro jogadores</h1><p>Greedy × LongTerm · tabuleiro 16×16×3 · 80 solos · {generated}</p></header>
+<main class="container"><div class="cards">
+<div class="metric"><b>{game_count}</b><span>partidas</span></div>
+<div class="metric"><b>{player_count}</b><span>jogadores por partida</span></div>
+<div class="metric"><b>{pct(games['occupancy'].mean())}</b><span>ocupação final</span></div>
+<div class="metric"><b>{num(games['turns'].mean())}</b><span>turnos médios</span></div>
+<div class="metric"><b>{num(soil_remaining)}</b><span>solos restantes</span></div>
+<div class="metric"><b>{pct(games['winner'].isna().mean())}</b><span>empates</span></div></div>
+<section><h2>Configuração analisada</h2><p>As partidas usam {player_count} jogadores,
+dois Greedy e dois LongTerm com assentos aleatorizados, tabuleiro de {board['width']}×{board['height']}×{board['max_layers']}
+({board_capacity} células) e suprimento compartilhado de {soil_supply} solos.</p>
+<div class="table-wrap narrow"><table><thead><tr><th>Solo</th><th>Quantidade</th><th>Proporção</th></tr></thead><tbody>{supply_rows}</tbody></table></div></section>
+<section><h2>Desempenho por estratégia</h2><div class="table-wrap"><table><thead><tr><th>Agente</th><th>Participações</th><th>Vitórias</th><th>% das partidas</th><th>Pontos médios</th><th>Mediana</th></tr></thead><tbody>{''.join(agent_rows)}</tbody></table></div>
+<p class="method">Como existem duas cópias de cada estratégia por partida, a taxa exibida é vitórias da estratégia divididas pelas {game_count} partidas.</p></section>
+<section><h2>Efeito do assento</h2><div class="table-wrap"><table><thead><tr><th>Assento</th><th>Vitórias</th><th>Pontos médios</th><th>Mediana</th></tr></thead><tbody>{''.join(seat_rows)}</tbody></table></div></section>
+<section><h2>Sinais principais de balanceamento</h2><div class="findings">
+<article><b>Uso do suprimento</b><p>{pct(soil_used_rate)} dos 80 solos foram usados; sobraram {num(soil_remaining)} em média.</p></article>
+<article><b>Diferença entre estratégias</b><p>Greedy ficou {strategy_gap * 100:+.1f} pp em vitórias e {score_gap:+.1f} pontos médios em relação ao LongTerm.</p></article>
+<article><b>Viés de posição</b><p>P{best_seat} teve a maior taxa de vitória ({pct(seat_rates[best_seat])}); a amplitude entre assentos foi {seat_spread * 100:.1f} pp.</p></article>
+<article><b>Povoamento</b><p>O recife terminou com {pct(games['occupancy'].mean())} das {board_capacity} células ocupadas.</p></article>
+</div><div class="note">Associação não implica causalidade: cartas e recursos podem acompanhar uma posição favorável sem serem sua causa.</div></section>
+{climate_and_duration_section(enriched)}
+{population_section(enriched)}
+{economy_section(enriched)}
+{card_efficiency_section(enriched)}
+{categories}
+<section><h2>Metodologia</h2><p>Foram analisadas {game_count} partidas e {len(players)} observações jogador-partida.
+As curvas usam o último estado de cada rodada. Os percentuais de vitória associados a cartas mantêm empates e derrotas no denominador.</p>
+<p class="method">Artefato: <code>{html.escape(str(enriched_dir))}</code>. Seeds a partir de {metadata.get('seed_start', 1000)}. Assentos aleatorizados: {metadata.get('randomize_seats', False)}.</p></section>
+<footer>Great Coral Reef · relatório de 4 jogadores / 80 solos · scripts/generate_tournament_report.py</footer>
+</main></body></html>"""
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Gera relatório HTML Greedy × LongTerm.")
-    parser.add_argument("--games", type=int, default=200, help="Partidas da amostra detalhada.")
-    parser.add_argument("--paired-dir", type=Path, help="Diretório de um torneio pareado.")
-    parser.add_argument("--results", type=Path, help="CSV detalhado existente; evita novo torneio.")
+    parser = argparse.ArgumentParser(
+        description="Gera relatório HTML do torneio de quatro jogadores."
+    )
+    parser.add_argument("--games", type=int, default=100, help="Partidas do torneio.")
     parser.add_argument(
         "--enriched-dir",
         type=Path,
@@ -735,25 +893,20 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    paired_dir = (args.paired_dir or latest_paired_dir()).resolve()
-    paired = pd.read_csv(paired_dir / "paired_results.csv")
-    paired_meta = json.loads((paired_dir / "metadata.json").read_text(encoding="utf-8"))
-    enriched_dir = (args.enriched_dir or latest_enriched_dir()).resolve()
-    enriched = load_enriched(enriched_dir)
-
-    if args.results:
-        detailed_path = args.results.resolve()
-        detailed = pd.read_csv(detailed_path)
-        detailed_dir = detailed_path.parent
+    if args.enriched_dir:
+        enriched_dir = args.enriched_dir.resolve()
     else:
-        detailed, detailed_dir = run_detailed_sample(args.games)
+        from collect_enriched_tournament import collect
 
-    output = (args.output or (detailed_dir / "greedy_vs_longterm_report.html")).resolve()
+        enriched_dir = collect(args.games).resolve()
+    enriched = load_enriched(enriched_dir)
+    metadata = json.loads((enriched_dir / "metadata.json").read_text(encoding="utf-8"))
+    output = (args.output or (enriched_dir / "report.html")).resolve()
     output.write_text(
-        render_report(paired, paired_meta, detailed, detailed_dir, enriched, enriched_dir),
+        render_four_player_report(enriched, enriched_dir, metadata),
         encoding="utf-8",
     )
-    print(f"Detailed artifact: {detailed_dir}")
+    print(f"Tournament artifact: {enriched_dir}")
     print(f"HTML report: {output}")
 
 

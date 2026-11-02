@@ -122,17 +122,24 @@ def final_player_metrics(state, player_id, agent: str, winner) -> dict:
     fauna_points = {layer: 0.0 for layer in layers}
     habitat_capacity = 0
     habitat_used = 0
+    coral_by_type = {coral_id: 0 for coral_id in state.available_corals}
+    fauna_by_type = {fauna_id: 0 for fauna_id in state.available_fauna}
+    soil_by_type = {soil_id: 0 for soil_id in state.available_soils}
 
     for position, cell in state.board.cells.items():
         layer = position[2]
+        if cell.soil is not None and cell.soil.owner == player_id:
+            soil_by_type[cell.soil.soil_id] += 1
         if cell.occupant is not None and cell.occupant.owner == player_id:
             coral_counts[layer] += 1
+            coral_by_type[cell.occupant.coral_id] += 1
             coral_points[layer] += score_coral(state, cell.occupant)
             habitat_capacity += effective_habitat_capacity(state, cell)
             habitat_used += occupied_habitat(state, cell)
         for fauna_id, fauna_owner in cell.fauna_with_owners():
             if fauna_owner == player_id:
                 fauna_counts[layer] += 1
+                fauna_by_type[fauna_id] += 1
                 fauna_points[layer] += score_fauna(state, fauna_id, position, player_id)
 
     full_towers = 0
@@ -176,6 +183,11 @@ def final_player_metrics(state, player_id, agent: str, winner) -> dict:
         "spent_sun": resource_value(player.spent_resources, ResourceType.SUN),
         "spent_plankton": resource_value(player.spent_resources, ResourceType.PLANKTON),
         "spent_o2": resource_value(player.spent_resources, ResourceType.O2),
+        "instincts": ";".join(player.instinct_cards),
+        "upgrades": ";".join(player.upgrade_cards),
+        **{f"coral_{card_id}": count for card_id, count in coral_by_type.items()},
+        **{f"fauna_{card_id}": count for card_id, count in fauna_by_type.items()},
+        **{f"soil_{soil_id}": count for soil_id, count in soil_by_type.items()},
         **{f"corals_z{z}": coral_counts[z] for z in layers},
         **{f"coral_points_z{z}": coral_points[z] for z in layers},
         **{f"fauna_z{z}": fauna_counts[z] for z in layers},
@@ -281,6 +293,7 @@ def collect(games: int) -> Path:
     event_rows = []
     final_card_rows = []
     curves = []
+    soil_supply = sum(soil.supply for soil in content["soils"].values())
 
     for index in tqdm(range(games), desc="Enriched tournament"):
         seed = 1000 + index
@@ -304,7 +317,12 @@ def collect(games: int) -> Path:
             player_id: GreedyAgent() if agent_name == "greedy" else LongTermAgent()
             for player_id, agent_name in zip(PlayerId, seat_names, strict=True)
         }
-        final_state, summary, telemetry = run_game(state, agents, max_rounds=50)
+        final_state, summary, telemetry = run_game(
+            state,
+            agents,
+            max_rounds=50,
+            compact_spatial_actions=True,
+        )
         winner = final_state.winner
         game_rows.append(
             {
@@ -318,6 +336,7 @@ def collect(games: int) -> Path:
                 "occupancy": summary["board_occupancy"],
                 "deck_remaining": len(final_state.coral_deck),
                 "soil_remaining": len(final_state.soil_pile),
+                "soil_supply": soil_supply,
             }
         )
         for player_id in PlayerId:
@@ -347,7 +366,14 @@ def collect(games: int) -> Path:
         "games": games,
         "seed_start": 1000,
         "agents": ["greedy", "longterm"],
+        "player_count": content["balance"]["players"]["count"],
+        "board": content["balance"]["board"],
+        "soil_supply": soil_supply,
+        "soil_supply_by_type": {
+            soil_id: soil.supply for soil_id, soil in content["soils"].items()
+        },
         "randomize_seats": True,
+        "compact_spatial_actions": True,
         "files": files,
     }
     (output / "metadata.json").write_text(

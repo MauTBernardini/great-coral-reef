@@ -115,6 +115,16 @@ de posições equivalentes para os agentes atuais; as regras do jogo não mudam.
 O jogo padrão usa atualmente 80 solos no suprimento compartilhado: 32 Sandy Bed,
 20 Rocky Reef, 20 Dark Overhang e 8 Seagrass Meadow.
 
+Para executar um torneio enriquecido de quatro jogadores e gerar o relatório HTML
+com cartas, camadas, clima e economia:
+
+```powershell
+py -3.12 scripts/generate_tournament_report.py --games 100
+```
+
+O comando salva os CSVs e o `report.html` no mesmo diretório em
+`artifacts/tournaments/enriched_*`.
+
 ### Consultar cartas, regras e torneios pela web
 
 A aplicação FastAPI oferece uma interface visual para o catálogo do jogo e também
